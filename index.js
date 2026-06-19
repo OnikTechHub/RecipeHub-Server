@@ -32,7 +32,27 @@ async function run() {
     const db = client.db("RecipeHubDB"); 
     const recipeCollection = db.collection("recipes");
 
+    // 1 API with optional Live Search/Category filter
     
+    app.get("/recipes", async (req, res) => {
+      try {
+        const { search, category } = req.query;
+        let query = {};
+
+        if (search) {
+          query.title = { $regex: search, $options: "i" }; // Case-insensitive search
+        }
+
+        if (category && category !== "All") {
+          query.category = category;
+        }
+
+        const result = await recipeCollection.find(query).toArray();
+        res.send({ success: true, data: result });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
 
   } finally {
     // Keep connection alive
