@@ -1,5 +1,5 @@
-const dns = require('node:dns');
-dns.setServers(['8.8.8.8', '8.8.4.4']);
+const dns = require("node:dns");
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const express = require("express");
 const cors = require("cors");
@@ -20,7 +20,7 @@ const client = new MongoClient(uri, {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
 
 async function run() {
@@ -29,11 +29,11 @@ async function run() {
     await client.connect();
     console.log("Database connected successfully to MongoDB!");
 
-    const db = client.db("RecipeHubDB"); 
+    const db = client.db("RecipeHubDB");
     const recipeCollection = db.collection("recipes");
 
     // 1 API with optional Live Search/Category filter
-    
+
     app.get("/recipes", async (req, res) => {
       try {
         const { search, category } = req.query;
@@ -54,6 +54,35 @@ async function run() {
       }
     });
 
+    // 2.single recipe API
+    app.get("/recipes/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { ObjectId } = require("mongodb");
+
+        
+        if (!ObjectId.isValid(id)) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Invalid Recipe ID format" });
+        }
+
+        const query = { _id: new ObjectId(id) };
+        const result = await recipeCollection.findOne(query);
+
+        if (!result) {
+          return res
+            .status(404)
+            .send({ success: false, message: "Recipe not found" });
+        }
+
+        res.send({ success: true, data: result });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    
   } finally {
     // Keep connection alive
   }
