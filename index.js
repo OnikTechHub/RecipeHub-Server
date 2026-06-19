@@ -60,7 +60,6 @@ async function run() {
         const id = req.params.id;
         const { ObjectId } = require("mongodb");
 
-        
         if (!ObjectId.isValid(id)) {
           return res
             .status(400)
@@ -82,7 +81,17 @@ async function run() {
       }
     });
 
-    
+    // 3. POST API
+    app.post("/recipes", async (req, res) => {
+      try {
+        const newRecipe = req.body;
+
+        const result = await recipeCollection.insertOne(newRecipe);
+        res.status(201).send({ success: true, insertedId: result.insertedId });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
   } finally {
     // Keep connection alive
   }
