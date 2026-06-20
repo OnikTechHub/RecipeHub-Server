@@ -103,7 +103,6 @@ async function run() {
             .send({ success: false, message: "Missing title or price" });
         }
 
-
         const clientOrigin = process.env.CLIENT_URL;
 
         if (!clientOrigin) {
@@ -144,7 +143,30 @@ async function run() {
       }
     });
 
-   
+    // 5.Payment Verify API
+    app.post("/verify-payment", async (req, res) => {
+      try {
+        const { sessionId } = req.body;
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+        if (session.payment_status === "paid") {
+          const existingPayment = await paymentCollection.findOne({
+            transactionId: session.payment_intent,
+          });
+
+          if (existingPayment) {
+            return res.send({ success: true, message: "Already saved" });
+          }
+
+          const paymentData = {
+            userEmail: session.metadata.userEmail,
+            amount: session.amount_total / 100,
+            recipeId: session.metadata.recipeId,
+            transactionId: session.payment_intent,
+            paymentStatus: "paid",
+            paidAt: new Date(),
+          };
+
           const result = await paymentCollection.insertOne(paymentData);
           return res.send({ success: true, insertedId: result.insertedId });
         }
