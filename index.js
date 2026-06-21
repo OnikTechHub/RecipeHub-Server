@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 
 const dns = require("dns");
@@ -36,14 +37,15 @@ async function run() {
 
     const db = client.db("RecipeHubDB");
 
+
     const userCollection = db.collection("user");
     const recipeCollection = db.collection("recipes");
     const paymentCollection = db.collection("payments");
     const favoriteCollection = db.collection("favorites");
     const reportCollection = db.collection("reports");
 
-    // ROLE CHECK API
-
+    // ROLE CHECK API 
+  
     app.get("/check-user-role", async (req, res) => {
       try {
         const { email } = req.query;
@@ -63,7 +65,7 @@ async function run() {
         res.send({
           success: true,
           data: {
-            role: user.role || "user",
+            role: user.role || "user", 
             isPremium: user.isPremium || false,
           },
         });
@@ -83,7 +85,7 @@ async function run() {
         }
 
         if (category && category !== "All") {
-          query.category = { $in: [category] };
+          query.category = { $in: [category] }; 
         }
 
         const result = await recipeCollection.find(query).toArray();
@@ -227,10 +229,12 @@ async function run() {
       try {
         const { email } = req.query;
         if (!email) {
-          return res.status(400).send({
-            success: false,
-            message: "Email query parameter is required",
-          });
+          return res
+            .status(400)
+            .send({
+              success: false,
+              message: "Email query parameter is required",
+            });
         }
 
         const totalRecipes = await recipeCollection.countDocuments({
@@ -251,6 +255,25 @@ async function run() {
         res.send({
           success: true,
           data: { totalRecipes, totalFavorites, totalLikesReceived },
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // ADMIN OVERVIEW STATS 
+    app.get("/admin-stats", async (req, res) => {
+      try {
+        const totalUsers = await userCollection.countDocuments();
+        const totalRecipes = await recipeCollection.countDocuments();
+        const totalPremiumMembers = await userCollection.countDocuments({
+          isPremium: true,
+        });
+        const totalReports = await reportCollection.countDocuments();
+
+        res.send({
+          success: true,
+          data: { totalUsers, totalRecipes, totalPremiumMembers, totalReports },
         });
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
