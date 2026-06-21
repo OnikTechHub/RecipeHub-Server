@@ -1,4 +1,4 @@
-require("dotenv").config(); 
+require("dotenv").config();
 
 const dns = require("dns");
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
@@ -6,7 +6,6 @@ dns.setServers(["8.8.8.8", "8.8.4.4"]);
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
@@ -36,41 +35,43 @@ async function run() {
     console.log("Database connected successfully to MongoDB!");
 
     const db = client.db("RecipeHubDB");
-    
 
-    const userCollection = db.collection("user"); 
+    const userCollection = db.collection("user");
     const recipeCollection = db.collection("recipes");
     const paymentCollection = db.collection("payments");
     const favoriteCollection = db.collection("favorites");
     const reportCollection = db.collection("reports");
 
-    // ROLE CHECK API 
+    // ROLE CHECK API
 
     app.get("/check-user-role", async (req, res) => {
       try {
         const { email } = req.query;
         if (!email) {
-          return res.status(400).send({ success: false, message: "Email parameter is required" });
+          return res
+            .status(400)
+            .send({ success: false, message: "Email parameter is required" });
         }
-        
+
         const user = await userCollection.findOne({ email: email });
         if (!user) {
-          return res.status(404).send({ success: false, message: "User not found in database" });
+          return res
+            .status(404)
+            .send({ success: false, message: "User not found in database" });
         }
 
         res.send({
           success: true,
           data: {
-            role: user.role || "user", 
-            isPremium: user.isPremium || false
-          }
+            role: user.role || "user",
+            isPremium: user.isPremium || false,
+          },
         });
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
       }
     });
 
-    
     // Recipe GET API (With Category & Search Filtering)
     app.get("/recipes", async (req, res) => {
       try {
@@ -82,7 +83,7 @@ async function run() {
         }
 
         if (category && category !== "All") {
-          query.category = { $in: [category] }; /
+          query.category = { $in: [category] };
         }
 
         const result = await recipeCollection.find(query).toArray();
@@ -97,13 +98,17 @@ async function run() {
       try {
         const id = req.params.id;
         if (!ObjectId.isValid(id)) {
-          return res.status(400).send({ success: false, message: "Invalid Recipe ID format" });
+          return res
+            .status(400)
+            .send({ success: false, message: "Invalid Recipe ID format" });
         }
         const query = { _id: new ObjectId(id) };
         const result = await recipeCollection.findOne(query);
 
         if (!result) {
-          return res.status(404).send({ success: false, message: "Recipe not found" });
+          return res
+            .status(404)
+            .send({ success: false, message: "Recipe not found" });
         }
         res.send({ success: true, data: result });
       } catch (error) {
@@ -123,18 +128,21 @@ async function run() {
     });
 
     // STRIPE CHECKOUT & VERIFICATION APIS
-   
     app.post("/create-checkout-session", async (req, res) => {
       try {
         const { recipeId, title, image, price, userEmail } = req.body;
 
         if (!title || !price) {
-          return res.status(400).send({ success: false, message: "Missing title or price" });
+          return res
+            .status(400)
+            .send({ success: false, message: "Missing title or price" });
         }
 
         const clientOrigin = process.env.CLIENT_URL;
         if (!clientOrigin) {
-          return res.status(500).send({ success: false, message: "CLIENT_URL is missing in .env" });
+          return res
+            .status(500)
+            .send({ success: false, message: "CLIENT_URL is missing in .env" });
         }
 
         const session = await stripe.checkout.sessions.create({
@@ -179,7 +187,10 @@ async function run() {
           });
 
           if (existingPayment) {
-            return res.send({ success: true, message: "Payment already processed" });
+            return res.send({
+              success: true,
+              message: "Payment already processed",
+            });
           }
 
           const paymentData = {
@@ -193,7 +204,58 @@ async function run() {
 
           const result = await paymentCollection.insertOne(paymentData);
 
+          if (session.metadata.recipeId === "membership_upgrade") {
+            await userCollection.updateOne(
+              { email: session.metadata.userEmail },
+              { $set: { isPremium: true, updatedAt: new Date() } },
+            );
+          }
 
+          return res.send({ success: true, insertedId: result.insertedId });
+        }
+
+        res
+          .status(400)
+          .send({ success: false, message: "Payment status unverified" });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // USER OVERVIEW STATS
+    app.get("/user-stats", async (req, res) => {
+      try {
+        const { email } = req.query;
+        if (!email) {
+          return res.status(400).send({
+            success: false,
+            message: "Email query parameter is required",
+          });
+        }
+
+        const totalRecipes = await recipeCollection.countDocuments({
+          authorEmail: email,
+        });
+        const totalFavorites = await favoriteCollection.countDocuments({
+          userEmail: email,
+        });
+
+        const recipes = await recipeCollection
+          .find({ authorEmail: email })
+          .toArray();
+        const totalLikesReceived = recipes.reduce(
+          (sum, r) => sum + (r.likesCount || 0),
+          0,
+        );
+
+        res.send({
+          success: true,
+          data: { totalRecipes, totalFavorites, totalLikesReceived },
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
   } catch (error) {
     console.error("MongoDB engine initialization crash:", error);
   }
