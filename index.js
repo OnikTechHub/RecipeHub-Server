@@ -1,10 +1,12 @@
+require("dotenv").config(); 
+
 const dns = require("dns");
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-require("dotenv").config();
+
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
@@ -34,10 +36,42 @@ async function run() {
     console.log("Database connected successfully to MongoDB!");
 
     const db = client.db("RecipeHubDB");
+    
+
+    const userCollection = db.collection("user"); 
     const recipeCollection = db.collection("recipes");
     const paymentCollection = db.collection("payments");
+    const favoriteCollection = db.collection("favorites");
+    const reportCollection = db.collection("reports");
 
-    // Recipe GET API
+    // ROLE CHECK API 
+
+    app.get("/check-user-role", async (req, res) => {
+      try {
+        const { email } = req.query;
+        if (!email) {
+          return res.status(400).send({ success: false, message: "Email parameter is required" });
+        }
+        
+        const user = await userCollection.findOne({ email: email });
+        if (!user) {
+          return res.status(404).send({ success: false, message: "User not found in database" });
+        }
+
+        res.send({
+          success: true,
+          data: {
+            role: user.role || "user", 
+            isPremium: user.isPremium || false
+          }
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    
+    // Recipe GET API (With Category & Search Filtering)
     app.get("/recipes", async (req, res) => {
       try {
         const { search, category } = req.query;
@@ -48,7 +82,7 @@ async function run() {
         }
 
         if (category && category !== "All") {
-          query.category = category;
+          query.category = { $in: [category] }; /
         }
 
         const result = await recipeCollection.find(query).toArray();
@@ -63,17 +97,13 @@ async function run() {
       try {
         const id = req.params.id;
         if (!ObjectId.isValid(id)) {
-          return res
-            .status(400)
-            .send({ success: false, message: "Invalid Recipe ID format" });
+          return res.status(400).send({ success: false, message: "Invalid Recipe ID format" });
         }
         const query = { _id: new ObjectId(id) };
         const result = await recipeCollection.findOne(query);
 
         if (!result) {
-          return res
-            .status(404)
-            .send({ success: false, message: "Recipe not found" });
+          return res.status(404).send({ success: false, message: "Recipe not found" });
         }
         res.send({ success: true, data: result });
       } catch (error) {
@@ -81,7 +111,7 @@ async function run() {
       }
     });
 
-    // 3. Recipe Post API
+    // Recipe Post API
     app.post("/recipes", async (req, res) => {
       try {
         const newRecipe = req.body;
@@ -92,24 +122,19 @@ async function run() {
       }
     });
 
-    // 4.Create a Checkout Session API
+    // STRIPE CHECKOUT & VERIFICATION APIS
+   
     app.post("/create-checkout-session", async (req, res) => {
       try {
         const { recipeId, title, image, price, userEmail } = req.body;
 
         if (!title || !price) {
-          return res
-            .status(400)
-            .send({ success: false, message: "Missing title or price" });
+          return res.status(400).send({ success: false, message: "Missing title or price" });
         }
 
         const clientOrigin = process.env.CLIENT_URL;
-
         if (!clientOrigin) {
-          return res.status(500).send({
-            success: false,
-            message: "CLIENT_URL is not defined in .env",
-          });
+          return res.status(500).send({ success: false, message: "CLIENT_URL is missing in .env" });
         }
 
         const session = await stripe.checkout.sessions.create({
@@ -129,21 +154,20 @@ async function run() {
           ],
           mode: "payment",
           metadata: {
-            recipeId: recipeId,
+            recipeId: recipeId || "membership_upgrade",
             userEmail: userEmail,
           },
           success_url: `${clientOrigin}/dashboard/purchased-recipes?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${clientOrigin}/browse-recipes/${recipeId}`,
+          cancel_url: `${clientOrigin}/browse-recipes`,
         });
 
         res.send({ success: true, id: session.id, url: session.url });
       } catch (error) {
-        console.error("Stripe Session Error:", error);
+        console.error("Stripe Checkout error:", error);
         res.status(500).send({ success: false, message: error.message });
       }
     });
 
-    // 5.Payment Verify API
     app.post("/verify-payment", async (req, res) => {
       try {
         const { sessionId } = req.body;
@@ -155,7 +179,7 @@ async function run() {
           });
 
           if (existingPayment) {
-            return res.send({ success: true, message: "Already saved" });
+            return res.send({ success: true, message: "Payment already processed" });
           }
 
           const paymentData = {
@@ -168,26 +192,18 @@ async function run() {
           };
 
           const result = await paymentCollection.insertOne(paymentData);
-          return res.send({ success: true, insertedId: result.insertedId });
-        }
 
-        res
-          .status(400)
-          .send({ success: false, message: "Payment not verified" });
-      } catch (error) {
-        res.status(500).send({ success: false, message: error.message });
-      }
-    });
+
   } catch (error) {
-    console.error("Database connection error:", error);
+    console.error("MongoDB engine initialization crash:", error);
   }
 }
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("RecipeHub Server is Running Perfectly!");
+  res.send("RecipeHub Production Server is Online!");
 });
 
 app.listen(port, () => {
-  console.log(`Server is breathing on port: ${port}`);
+  console.log(`Server running smoothly on port: ${port}`);
 });
