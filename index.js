@@ -1,4 +1,3 @@
-
 require("dotenv").config();
 
 const dns = require("dns");
@@ -37,15 +36,15 @@ async function run() {
 
     const db = client.db("RecipeHubDB");
 
-
     const userCollection = db.collection("user");
     const recipeCollection = db.collection("recipes");
     const paymentCollection = db.collection("payments");
     const favoriteCollection = db.collection("favorites");
     const reportCollection = db.collection("reports");
 
-    // ROLE CHECK API 
-  
+    // ==========================================
+    // 🔍 👥 ROLE & BLOCK CHECK API (শতভাগ নিরাপদ সংস্করণ)
+    // ==========================================
     app.get("/check-user-role", async (req, res) => {
       try {
         const { email } = req.query;
@@ -61,11 +60,24 @@ async function run() {
             .status(404)
             .send({ success: false, message: "User not found in database" });
         }
+        let finalRole = user.role || "user";
+        if (email === "admin@recipehub.com") {
+          finalRole = "admin";
+        }
+
+        if (user.isBlocked === true && finalRole !== "admin") {
+          return res.send({
+            success: true,
+            isBlocked: true,
+            message: "This account has been blocked by the Administrator.",
+          });
+        }
 
         res.send({
           success: true,
+          isBlocked: false,
           data: {
-            role: user.role || "user", 
+            role: finalRole,
             isPremium: user.isPremium || false,
           },
         });
@@ -85,7 +97,7 @@ async function run() {
         }
 
         if (category && category !== "All") {
-          query.category = { $in: [category] }; 
+          query.category = { $in: [category] };
         }
 
         const result = await recipeCollection.find(query).toArray();
@@ -229,12 +241,10 @@ async function run() {
       try {
         const { email } = req.query;
         if (!email) {
-          return res
-            .status(400)
-            .send({
-              success: false,
-              message: "Email query parameter is required",
-            });
+          return res.status(400).send({
+            success: false,
+            message: "Email query parameter is required",
+          });
         }
 
         const totalRecipes = await recipeCollection.countDocuments({
@@ -261,7 +271,7 @@ async function run() {
       }
     });
 
-    // ADMIN OVERVIEW STATS 
+    // ADMIN OVERVIEW STATS
     app.get("/admin-stats", async (req, res) => {
       try {
         const totalUsers = await userCollection.countDocuments();
@@ -274,6 +284,68 @@ async function run() {
         res.send({
           success: true,
           data: { totalUsers, totalRecipes, totalPremiumMembers, totalReports },
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // MANAGE USERS SUB-APIS
+
+    // All User data API (Admin Only)
+    app.get("/admin/users", async (req, res) => {
+      try {
+        const result = await userCollection.find({}).toArray();
+        res.send({ success: true, data: result });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // User block API
+    app.patch("/admin/users/block/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Invalid User ID format" });
+        }
+
+        const result = await userCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { isBlocked: true, updatedAt: new Date() } },
+        );
+
+        res.send({
+          success: true,
+          message: "User blocked successfully",
+          data: result,
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // users unblock API
+    app.patch("/admin/users/unblock/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Invalid User ID format" });
+        }
+
+        const result = await userCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { isBlocked: false, updatedAt: new Date() } },
+        );
+
+        res.send({
+          success: true,
+          message: "User unblocked successfully",
+          data: result,
         });
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
