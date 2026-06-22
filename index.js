@@ -425,6 +425,41 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
+
+    // Admin Recipes Featured Toggle API
+
+    app.patch("/admin/recipes/feature/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { isFeatured } = req.body;
+
+        if (!ObjectId.isValid(id)) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Invalid Recipe ID format" });
+        }
+
+        const result = await recipeCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              isFeatured: isFeatured,
+              featuredAt: isFeatured ? new Date() : null,
+            },
+          },
+        );
+
+        res.send({
+          success: true,
+          message: isFeatured
+            ? "Recipe marked as Featured!"
+            : "Recipe removed from Featured!",
+          data: result,
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
   } catch (error) {
     console.error("MongoDB engine initialization crash:", error);
   }
