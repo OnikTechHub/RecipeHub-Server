@@ -140,6 +140,85 @@ async function run() {
       }
     });
 
+    // RECIPE LIKE & FAVORITE SYSTEM APIS 
+
+    // LIKE API
+    app.patch("/recipes/:id/like", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { userEmail } = req.body;
+
+        if (!ObjectId.isValid(id) || !userEmail) {
+          return res
+            .status(400)
+            .send({
+              success: false,
+              message: "Invalid parameters or missing email.",
+            });
+        }
+
+        const recipe = await recipeCollection.findOne({
+          _id: new ObjectId(id),
+        });
+        if (!recipe) {
+          return res
+            .status(404)
+            .send({ success: false, message: "Recipe not found" });
+        }
+
+        const likedUsers = recipe.likedUsers || [];
+        const hasLiked = likedUsers.includes(userEmail);
+
+        let updateDoc = {};
+        if (hasLiked) {
+          updateDoc = {
+            $pull: { likedUsers: userEmail },
+            $inc: { likesCount: -1 },
+          };
+        } else {
+          updateDoc = {
+            $addToSet: { likedUsers: userEmail },
+            $inc: { likesCount: 1 },
+          };
+        }
+
+        await recipeCollection.updateOne({ _id: new ObjectId(id) }, updateDoc);
+        res.send({ success: true, isLiked: !hasLiked });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // FAVORITE API
+    app.post("/favorites", async (req, res) => {
+      try {
+        const { recipeId, userEmail } = req.body; 
+
+        
+        const exist = await favoriteCollection.findOne({ recipeId, userEmail });
+        if (exist) {
+          return res.send({ success: false, message: "Already in favorites!" });
+        }
+
+        const result = await favoriteCollection.insertOne({
+          recipeId,
+          userEmail,
+          createdAt: new Date(),
+        });
+
+        if (result.insertedId) {
+          return res.send({ success: true, message: "Added to favorites!" });
+        } else {
+          return res.send({ success: false, message: "Failed to add!" });
+        }
+      } catch (error) {
+        console.error("Favorite backend error:", error);
+        res
+          .status(500)
+          .send({ success: false, message: "Internal server error" });
+      }
+    });
+
     //  STRIPE CHECKOUT & VERIFICATION INTEGRATION
 
     app.post("/create-checkout-session", async (req, res) => {
@@ -302,7 +381,7 @@ async function run() {
       }
     });
 
-    // RECIPE REPORTS SYSTEM APIS 
+    // RECIPE REPORTS SYSTEM APIS
 
     app.post("/reports", async (req, res) => {
       try {
@@ -310,12 +389,10 @@ async function run() {
           req.body;
 
         if (!recipeId || !reason) {
-          return res
-            .status(400)
-            .send({
-              success: false,
-              message: "Recipe ID and Reason are required.",
-            });
+          return res.status(400).send({
+            success: false,
+            message: "Recipe ID and Reason are required.",
+          });
         }
 
         const reportData = {
@@ -328,13 +405,11 @@ async function run() {
         };
 
         const result = await reportCollection.insertOne(reportData);
-        res
-          .status(201)
-          .send({
-            success: true,
-            insertedId: result.insertedId,
-            message: "Report submitted successfully.",
-          });
+        res.status(201).send({
+          success: true,
+          insertedId: result.insertedId,
+          message: "Report submitted successfully.",
+        });
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
       }
