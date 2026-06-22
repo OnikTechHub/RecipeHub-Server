@@ -42,9 +42,7 @@ async function run() {
     const favoriteCollection = db.collection("favorites");
     const reportCollection = db.collection("reports");
 
-    // ==========================================
-    // 🔍 👥 ROLE & BLOCK CHECK API (শতভাগ নিরাপদ সংস্করণ)
-    // ==========================================
+    // ROLE & BLOCK CHECK API 
     app.get("/check-user-role", async (req, res) => {
       try {
         const { email } = req.query;
@@ -351,6 +349,20 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
+
+    // MANAGE RECIPES APIS
+
+    // All Recipes for database API (Admin Only)
+    app.get("/admin/recipes", async (req, res) => {
+      try {
+        const result = await recipeCollection.find({}).toArray();
+        res.send({ success: true, data: result });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    
   } catch (error) {
     console.error("MongoDB engine initialization crash:", error);
   }
