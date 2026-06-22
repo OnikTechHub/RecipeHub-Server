@@ -58,6 +58,7 @@ async function run() {
             .status(404)
             .send({ success: false, message: "User not found in database" });
         }
+
         let finalRole = user.role || "user";
         if (email === "admin@recipehub.com") {
           finalRole = "admin";
@@ -84,7 +85,7 @@ async function run() {
       }
     });
 
-    // Recipe GET API (With Category & Search Filtering)
+    // Recipe GET API (With Category $in & Search Filtering)
     app.get("/recipes", async (req, res) => {
       try {
         const { search, category } = req.query;
@@ -139,10 +140,11 @@ async function run() {
       }
     });
 
-    // STRIPE CHECKOUT & VERIFICATION APIS
+    //  STRIPE CHECKOUT & VERIFICATION INTEGRATION
+
     app.post("/create-checkout-session", async (req, res) => {
       try {
-        const { recipeId, title, image, price, userEmail } = req.body;
+        const { recipeId, title, image, price, userEmail, userId } = req.body;
 
         if (!title || !price) {
           return res
@@ -176,6 +178,7 @@ async function run() {
           metadata: {
             recipeId: recipeId || "membership_upgrade",
             userEmail: userEmail,
+            userId: userId || "N/A",
           },
           success_url: `${clientOrigin}/dashboard/purchased-recipes?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${clientOrigin}/browse-recipes`,
@@ -190,7 +193,7 @@ async function run() {
 
     app.post("/verify-payment", async (req, res) => {
       try {
-        const { sessionId } = req.body;
+        const { sessionId, userId } = req.body;
         const session = await stripe.checkout.sessions.retrieve(sessionId);
 
         if (session.payment_status === "paid") {
@@ -207,6 +210,7 @@ async function run() {
 
           const paymentData = {
             userEmail: session.metadata.userEmail,
+            userId: userId || session.metadata.userId || "N/A",
             amount: session.amount_total / 100,
             recipeId: session.metadata.recipeId,
             transactionId: session.payment_intent,
@@ -233,6 +237,73 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
+
+    // OPTIMIZED TRANSACTIONS API
+
+    app.get("/transactions", async (req, res) => {
+      try {
+        const userEmail = req.query.email;
+        let matchStage = {};
+        if (userEmail) {
+          matchStage = { userEmail: userEmail };
+        }
+
+        const pipeline = [
+          { $match: matchStage },
+          {
+            $addFields: {
+              convertedRecipeId: {
+                $cond: {
+                  if: { $eq: ["$recipeId", "membership_upgrade"] },
+                  then: null,
+                  else: {
+                    $cond: {
+                      if: {
+                        $regexMatch: {
+                          input: "$recipeId",
+                          regex: /^[0-9a-fA-F]{24}$/,
+                        },
+                      },
+                      then: { $toObjectId: "$recipeId" },
+                      else: "$recipeId",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: "recipes",
+              localField: "convertedRecipeId",
+              foreignField: "_id",
+              as: "recipeDetails",
+            },
+          },
+          {
+            $addFields: {
+              recipeInfo: { $arrayElemAt: ["$recipeDetails", 0] },
+            },
+          },
+          {
+            $project: {
+              recipeDetails: 0,
+              convertedRecipeId: 0,
+            },
+          },
+          { $sort: { paidAt: -1 } },
+        ];
+
+        const result = await paymentCollection.aggregate(pipeline).toArray();
+        res.send({ success: true, data: result });
+      } catch (error) {
+        console.error("Aggregation error in /transactions:", error);
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+
+    // DASHBOARD OVERVIEW STATISTICS (USER & ADMIN)
 
     // USER OVERVIEW STATS
     app.get("/user-stats", async (req, res) => {
@@ -288,9 +359,9 @@ async function run() {
       }
     });
 
-    // MANAGE USERS SUB-APIS
+    // ADMIN CONTROL: MANAGE USERS SUB-APIS
 
-    // All User data API (Admin Only)
+    // All User data API
     app.get("/admin/users", async (req, res) => {
       try {
         const result = await userCollection.find({}).toArray();
@@ -300,7 +371,7 @@ async function run() {
       }
     });
 
-    // User block API
+    // User block API (FIXED TYPO)
     app.patch("/admin/users/block/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -325,7 +396,7 @@ async function run() {
       }
     });
 
-    // users unblock API
+    // User unblock API
     app.patch("/admin/users/unblock/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -350,9 +421,7 @@ async function run() {
       }
     });
 
-    // MANAGE RECIPES APIS
-
-    // All Recipes for database API (Admin Only)
+    // All Recipes API
     app.get("/admin/recipes", async (req, res) => {
       try {
         const result = await recipeCollection.find({}).toArray();
@@ -362,7 +431,7 @@ async function run() {
       }
     });
 
-    // Admin recipes delete API
+    // Admin recipe delete API (Remove Recipe action)
     app.delete("/admin/recipes/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -372,20 +441,13 @@ async function run() {
             .send({ success: false, message: "Invalid Recipe ID format" });
         }
 
-        const result = await recipeCollection.deleteOne({
-          _id: new ObjectId(id),
-        });
-
-        if (result.deletedCount === 0) {
-          return res
-            .status(404)
-            .send({ success: false, message: "Recipe not found" });
-        }
+        await recipeCollection.deleteOne({ _id: new ObjectId(id) });
+        await reportCollection.deleteMany({ recipeId: id });
 
         res.send({
           success: true,
-          message: "Recipe deleted successfully by Admin",
-          data: result,
+          message:
+            "Recipe and its relative reports removed successfully by Admin.",
         });
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
@@ -427,7 +489,6 @@ async function run() {
     });
 
     // Admin Recipes Featured Toggle API
-
     app.patch("/admin/recipes/feature/:id", async (req, res) => {
       try {
         const id = req.params.id;
