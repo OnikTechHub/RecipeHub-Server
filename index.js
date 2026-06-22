@@ -42,7 +42,7 @@ async function run() {
     const favoriteCollection = db.collection("favorites");
     const reportCollection = db.collection("reports");
 
-    // ROLE & BLOCK CHECK API 
+    // ROLE & BLOCK CHECK API
     app.get("/check-user-role", async (req, res) => {
       try {
         const { email } = req.query;
@@ -392,7 +392,39 @@ async function run() {
       }
     });
 
-   
+    // Admin Recipes Update API
+    app.put("/admin/recipes/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { recipeName, category, cuisine, prepTime } = req.body;
+
+        if (!ObjectId.isValid(id)) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Invalid Recipe ID format" });
+        }
+        const result = await recipeCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              recipeName,
+              category,
+              cuisine,
+              prepTime,
+              updatedAt: new Date(),
+            },
+          },
+        );
+
+        res.send({
+          success: true,
+          message: "Recipe updated successfully with modern parameters",
+          data: result,
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
   } catch (error) {
     console.error("MongoDB engine initialization crash:", error);
   }
