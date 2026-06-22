@@ -129,10 +129,24 @@ async function run() {
       }
     });
 
-    // Recipe Post API
+    // Recipe Post API 
     app.post("/recipes", async (req, res) => {
       try {
         const newRecipe = req.body;
+        
+        const user = await userCollection.findOne({ email: newRecipe.authorEmail });
+        
+        const existingRecipesCount = await recipeCollection.countDocuments({
+          authorEmail: newRecipe.authorEmail,
+        });
+
+        if (!user?.isPremium && existingRecipesCount >= 2) {
+          return res.status(403).send({
+            success: false,
+            message: "Standard accounts have a 2-recipe limit! Upgrade to Premium to unlock unlimited creations.",
+          });
+        }
+
         const result = await recipeCollection.insertOne(newRecipe);
         res.status(201).send({ success: true, insertedId: result.insertedId });
       } catch (error) {
@@ -194,7 +208,6 @@ async function run() {
       try {
         const { recipeId, userEmail } = req.body; 
 
-        
         const exist = await favoriteCollection.findOne({ recipeId, userEmail });
         if (exist) {
           return res.send({ success: false, message: "Already in favorites!" });
@@ -317,8 +330,7 @@ async function run() {
       }
     });
 
-    // OPTIMIZED TRANSACTIONS API
-
+    // OPTIMIZED TRANSACTIONS API (FIXED SYNTAX ERROR)
     app.get("/transactions", async (req, res) => {
       try {
         const userEmail = req.query.email;
@@ -350,7 +362,7 @@ async function run() {
                 },
               },
             },
-          },
+          }, // 💎 এখানে পূর্বে ভুল করে স্কয়ার ব্র্যাকেট ক্লোজ করা হয়েছিল [ ]। এখন ঠিক করা হয়েছে।
           {
             $lookup: {
               from: "recipes",
@@ -697,6 +709,34 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
+
+    // ADDED APIS FOR ADD_RECIPE CLIENT-SIDE INTEGRATION
+
+    // Premium status API
+    app.get("/users/:email", async (req, res) => {
+      try {
+        const { email } = req.params;
+        const user = await userCollection.findOne({ email: email });
+        res.send({ success: true, data: user });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    app.get("/recipes-count", async (req, res) => {
+      try {
+        const { email } = req.query;
+        if (!email) {
+          return res.status(400).send({ success: false, message: "Email parameter required" });
+        }
+        const count = await recipeCollection.countDocuments({ authorEmail: email });
+        res.send({ success: true, count });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+
   } catch (error) {
     console.error("MongoDB engine initialization crash:", error);
   }
