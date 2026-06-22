@@ -302,6 +302,107 @@ async function run() {
       }
     });
 
+    // RECIPE REPORTS SYSTEM APIS 
+
+    app.post("/reports", async (req, res) => {
+      try {
+        const { recipeId, recipeName, reporterEmail, reason, details } =
+          req.body;
+
+        if (!recipeId || !reason) {
+          return res
+            .status(400)
+            .send({
+              success: false,
+              message: "Recipe ID and Reason are required.",
+            });
+        }
+
+        const reportData = {
+          recipeId: recipeId,
+          recipeName: recipeName || "Unknown Recipe",
+          reporterEmail: reporterEmail || "Anonymous",
+          reason: reason,
+          details: details || "",
+          reportedAt: new Date(),
+        };
+
+        const result = await reportCollection.insertOne(reportData);
+        res
+          .status(201)
+          .send({
+            success: true,
+            insertedId: result.insertedId,
+            message: "Report submitted successfully.",
+          });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    app.get("/admin/reports", async (req, res) => {
+      try {
+        const pipeline = [
+          {
+            $addFields: {
+              convertedRecipeId: {
+                $cond: {
+                  if: {
+                    $regexMatch: {
+                      input: "$recipeId",
+                      regex: /^[0-9a-fA-F]{24}$/,
+                    },
+                  },
+                  then: { $toObjectId: "$recipeId" },
+                  else: "$recipeId",
+                },
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: "recipes",
+              localField: "convertedRecipeId",
+              foreignField: "_id",
+              as: "targetRecipe",
+            },
+          },
+          {
+            $addFields: {
+              recipeInfo: { $arrayElemAt: ["$targetRecipe", 0] },
+            },
+          },
+          { $project: { targetRecipe: 0, convertedRecipeId: 0 } },
+          { $sort: { reportedAt: -1 } },
+        ];
+
+        const result = await reportCollection.aggregate(pipeline).toArray();
+        res.send({ success: true, data: result });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    app.delete("/admin/reports/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Invalid Report ID format" });
+        }
+        const result = await reportCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send({
+          success: true,
+          message: "Report dismissed successfully by Admin.",
+          data: result,
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
 
     // DASHBOARD OVERVIEW STATISTICS (USER & ADMIN)
 
