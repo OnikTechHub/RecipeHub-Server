@@ -362,7 +362,37 @@ async function run() {
       }
     });
 
-    
+    // Admin recipes delete API
+    app.delete("/admin/recipes/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Invalid Recipe ID format" });
+        }
+
+        const result = await recipeCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        if (result.deletedCount === 0) {
+          return res
+            .status(404)
+            .send({ success: false, message: "Recipe not found" });
+        }
+
+        res.send({
+          success: true,
+          message: "Recipe deleted successfully by Admin",
+          data: result,
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+   
   } catch (error) {
     console.error("MongoDB engine initialization crash:", error);
   }
