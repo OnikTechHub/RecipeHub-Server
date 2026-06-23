@@ -770,7 +770,60 @@ async function run() {
       }
     });
 
-    // API to delete a specific recipe by ID 
+    // Verified Purchase Details along with Recipe Metadata
+    app.get("/purchased-details/:id", async (req, res) => {
+      try {
+        const id = req.params.id; // recipeId
+        const email = req.query.email;
+
+        if (!email) {
+          return res
+            .status(400)
+            .send({
+              success: false,
+              message: "Email query parameter is required!",
+            });
+        }
+
+        // Payment Verified
+        const paymentRecord = await paymentCollection.findOne({
+          recipeId: id,
+          userEmail: email,
+        });
+
+        if (!paymentRecord) {
+          return res.status(404).send({
+            success: false,
+            message: "Purchase history not found in database!",
+          });
+        }
+
+        const recipeRecord = await recipeCollection.findOne({
+          _id: ObjectId.isValid(id) ? new ObjectId(id) : id,
+        });
+
+        res.send({
+          success: true,
+          message: "Purchase and Recipe verified successfully!",
+          data: {
+            transactionId: paymentRecord.transactionId,
+            userEmail: paymentRecord.userEmail,
+            amount: paymentRecord.amount,
+            paidAt: paymentRecord.paidAt || paymentRecord.createdAt,
+            recipeImage:
+              recipeRecord?.recipeImage || recipeRecord?.image || null,
+            likesCount: recipeRecord?.likesCount || 0,
+          },
+        });
+      } catch (error) {
+        console.error("Error verifying purchase details:", error);
+        res
+          .status(500)
+          .send({ success: false, message: "Internal server error" });
+      }
+    });
+
+    // API to delete a specific recipe by ID
     app.delete("/recipes/:id", async (req, res) => {
       try {
         const id = req.params.id;
