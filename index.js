@@ -777,12 +777,10 @@ async function run() {
         const email = req.query.email;
 
         if (!email) {
-          return res
-            .status(400)
-            .send({
-              success: false,
-              message: "Email query parameter is required!",
-            });
+          return res.status(400).send({
+            success: false,
+            message: "Email query parameter is required!",
+          });
         }
 
         // Payment Verified
@@ -876,6 +874,58 @@ async function run() {
         res
           .status(500)
           .send({ success: false, message: "Internal server error." });
+      }
+    });
+
+    // Updating profile name and image link API
+
+    app.put("/api/user/update", async (req, res) => {
+      try {
+        const { email, name, image } = req.body;
+
+        if (!email) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Email is required" });
+        }
+
+        const filter = {
+          email: { $regex: `^${email.trim()}$`, $options: "i" },
+        };
+
+        const updateDoc = {
+          $set: {
+            name: name ? name.trim() : "",
+            image: image ? image.trim() : "",
+            updatedAt: new Date(),
+          },
+        };
+
+        const result = await db.collection("user").updateOne(filter, updateDoc);
+
+        if (result.matchedCount === 0) {
+          const backupResult = await db
+            .collection("users")
+            .updateOne(filter, updateDoc);
+
+          if (backupResult.matchedCount === 0) {
+            return res.status(404).send({
+              success: false,
+              message: "User not found in any collection",
+            });
+          }
+        }
+
+        return res
+          .status(200)
+          .send({ success: true, message: "Profile updated successfully" });
+      } catch (error) {
+        console.error("Database update error:", error);
+        return res.status(500).send({
+          success: false,
+          message: "Internal Server Error",
+          error: error.message,
+        });
       }
     });
   } catch (error) {
