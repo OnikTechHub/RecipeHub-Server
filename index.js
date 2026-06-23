@@ -1069,6 +1069,63 @@ async function run() {
         res.status(500).send({ success: false, message: error.message });
       }
     });
+
+    // All reports Api
+    app.get("/reports", async (req, res) => {
+      try {
+        const result = await reportCollection
+          .aggregate([
+            {
+              $addFields: {
+                recipeObjectId: {
+                  $cond: {
+                    if: { $eq: [{ $type: "$recipeId" }, "string"] },
+                    then: { $toObjectId: "$recipeId" },
+                    else: "$recipeId",
+                  },
+                },
+              },
+            },
+            {
+              $lookup: {
+                from: "recipes",
+                localField: "recipeObjectId",
+                foreignField: "_id",
+                as: "recipeDetails",
+              },
+            },
+            {
+              $unwind: {
+                path: "$recipeDetails",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+          ])
+          .toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: error.message });
+      }
+    });
+
+    app.delete("/reports/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { action, recipeId } = req.query;
+
+        if (action === "delete" && recipeId) {
+          await recipeCollection.deleteOne({ _id: new ObjectId(recipeId) });
+        }
+
+        const result = await reportCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        res.send({ success: true, deletedCount: result.deletedCount });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
   } catch (error) {
     console.error("MongoDB engine initialization crash:", error);
   }
