@@ -85,6 +85,30 @@ async function run() {
       }
     });
 
+    // 🛠️ ADDED FOR PROFILE PAGE SYNC
+    app.get("/api/user/status", async (req, res) => {
+      try {
+        const { email } = req.query;
+        if (!email) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Email is required" });
+        }
+        const user = await userCollection.findOne({ email: email });
+        if (!user) {
+          return res
+            .status(404)
+            .send({ success: false, message: "User not found" });
+        }
+        return res.status(200).send({
+          success: true,
+          isPremium: user.isPremium || false,
+        });
+      } catch (error) {
+        return res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
     // Recipe GET API (With Category $in & Search Filtering)
     app.get("/recipes", async (req, res) => {
       try {
@@ -926,6 +950,63 @@ async function run() {
           message: "Internal Server Error",
           error: error.message,
         });
+      }
+    });
+
+    // payment success webhook API
+    app.post("/api/payment-success-webhook", async (req, res) => {
+      const session = req.body; // Stripe সেশনের ডাটা
+
+      try {
+        const userEmail = session?.userEmail || session?.metadata?.userEmail;
+        const transactionId = session?.id || session?.payment_intent;
+
+        if (!userEmail) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Missing user email" });
+        }
+
+        // transactionId
+        const existingPayment = await paymentCollection.findOne({
+          transactionId,
+        });
+        if (existingPayment) {
+          return res
+            .status(200)
+            .json({ success: true, message: "Already processed" });
+        }
+
+        await paymentCollection.insertOne({
+          userEmail,
+          recipeId: "membership_upgrade",
+          title: "RecipeHub Pro Premium Membership",
+          price: 19.99,
+          transactionId,
+          paymentStatus: "paid",
+          paidAt: new Date(),
+        });
+
+        const updateResult = await userCollection.updateOne(
+          { email: userEmail },
+          {
+            $set: {
+              isPremium: true,
+              role: "premium",
+              updatedAt: new Date(),
+            },
+          },
+        );
+
+        console.log(`User ${userEmail} successfully upgraded to Premium!`);
+        return res
+          .status(200)
+          .json({ success: true, message: "Membership upgraded successfully" });
+      } catch (error) {
+        console.error("Error upgrading membership:", error);
+        return res
+          .status(500)
+          .json({ success: false, message: "Internal server error" });
       }
     });
   } catch (error) {
