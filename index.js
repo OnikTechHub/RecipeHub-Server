@@ -129,13 +129,15 @@ async function run() {
       }
     });
 
-    // Recipe Post API 
+    // Recipe Post API
     app.post("/recipes", async (req, res) => {
       try {
         const newRecipe = req.body;
-        
-        const user = await userCollection.findOne({ email: newRecipe.authorEmail });
-        
+
+        const user = await userCollection.findOne({
+          email: newRecipe.authorEmail,
+        });
+
         const existingRecipesCount = await recipeCollection.countDocuments({
           authorEmail: newRecipe.authorEmail,
         });
@@ -143,7 +145,8 @@ async function run() {
         if (!user?.isPremium && existingRecipesCount >= 2) {
           return res.status(403).send({
             success: false,
-            message: "Standard accounts have a 2-recipe limit! Upgrade to Premium to unlock unlimited creations.",
+            message:
+              "Standard accounts have a 2-recipe limit! Upgrade to Premium to unlock unlimited creations.",
           });
         }
 
@@ -154,7 +157,7 @@ async function run() {
       }
     });
 
-    // RECIPE LIKE & FAVORITE SYSTEM APIS 
+    // RECIPE LIKE & FAVORITE SYSTEM APIS
 
     // LIKE API
     app.patch("/recipes/:id/like", async (req, res) => {
@@ -163,12 +166,10 @@ async function run() {
         const { userEmail } = req.body;
 
         if (!ObjectId.isValid(id) || !userEmail) {
-          return res
-            .status(400)
-            .send({
-              success: false,
-              message: "Invalid parameters or missing email.",
-            });
+          return res.status(400).send({
+            success: false,
+            message: "Invalid parameters or missing email.",
+          });
         }
 
         const recipe = await recipeCollection.findOne({
@@ -206,7 +207,7 @@ async function run() {
     // FAVORITE API
     app.post("/favorites", async (req, res) => {
       try {
-        const { recipeId, userEmail } = req.body; 
+        const { recipeId, userEmail } = req.body;
 
         const exist = await favoriteCollection.findOne({ recipeId, userEmail });
         if (exist) {
@@ -362,7 +363,7 @@ async function run() {
                 },
               },
             },
-          }, // 💎 এখানে পূর্বে ভুল করে স্কয়ার ব্র্যাকেট ক্লোজ করা হয়েছিল [ ]। এখন ঠিক করা হয়েছে।
+          },
           {
             $lookup: {
               from: "recipes",
@@ -727,16 +728,103 @@ async function run() {
       try {
         const { email } = req.query;
         if (!email) {
-          return res.status(400).send({ success: false, message: "Email parameter required" });
+          return res
+            .status(400)
+            .send({ success: false, message: "Email parameter required" });
         }
-        const count = await recipeCollection.countDocuments({ authorEmail: email });
+        const count = await recipeCollection.countDocuments({
+          authorEmail: email,
+        });
         res.send({ success: true, count });
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
       }
     });
 
+    // API for finding recipes based on a user's email
+    app.get("/my-recipes", async (req, res) => {
+      try {
+        const email = req.query.email;
 
+        if (!email) {
+          return res.status(400).send({
+            success: false,
+            message: "Email query parameter is required!",
+          });
+        }
+
+        const query = { authorEmail: email };
+        const result = await recipeCollection.find(query).toArray();
+
+        res.send({
+          success: true,
+          message: "Recipes fetched successfully!",
+          data: result,
+        });
+      } catch (error) {
+        console.error("Error fetching user recipes:", error);
+        res.status(500).send({
+          success: false,
+          message: "Internal Server Error while fetching recipes.",
+        });
+      }
+    });
+
+    // API to delete a specific recipe by ID 
+    app.delete("/recipes/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        const query = { _id: new ObjectId(id) };
+        const result = await recipeCollection.deleteOne(query);
+
+        if (result.deletedCount === 1) {
+          res.send({
+            success: true,
+            message: "Recipe deleted successfully!",
+          });
+        } else {
+          res.status(404).send({
+            success: false,
+            message: "Recipe not found!",
+          });
+        }
+      } catch (error) {
+        console.error("Error deleting recipe:", error);
+        res.status(500).send({
+          success: false,
+          message: "Internal Server Error while deleting the recipe.",
+        });
+      }
+    });
+
+    app.patch("/recipes/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const updatedData = req.body;
+        delete updatedData._id;
+
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: updatedData,
+        };
+
+        const result = await recipeCollection.updateOne(filter, updateDoc);
+
+        if (result.modifiedCount > 0 || result.matchedCount > 0) {
+          res.send({ success: true, message: "Recipe updated successfully!" });
+        } else {
+          res
+            .status(400)
+            .send({ success: false, message: "No changes were made." });
+        }
+      } catch (error) {
+        console.error("Error updating recipe:", error);
+        res
+          .status(500)
+          .send({ success: false, message: "Internal server error." });
+      }
+    });
   } catch (error) {
     console.error("MongoDB engine initialization crash:", error);
   }
