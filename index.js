@@ -955,7 +955,7 @@ async function run() {
 
     // payment success webhook API
     app.post("/api/payment-success-webhook", async (req, res) => {
-      const session = req.body; // Stripe সেশনের ডাটা
+      const session = req.body;
 
       try {
         const userEmail = session?.userEmail || session?.metadata?.userEmail;
@@ -1007,6 +1007,66 @@ async function run() {
         return res
           .status(500)
           .json({ success: false, message: "Internal server error" });
+      }
+    });
+
+    // --- FAVORITES API ---
+    app.get("/favorites", async (req, res) => {
+      try {
+        const { email } = req.query;
+        if (!email)
+          return res
+            .status(400)
+            .send({ success: false, message: "Email required" });
+
+        const pipeline = [
+          { $match: { userEmail: email } },
+          {
+            $addFields: {
+              convertedRecipeId: {
+                $cond: {
+                  if: {
+                    $regexMatch: {
+                      input: "$recipeId",
+                      regex: /^[0-9a-fA-F]{24}$/,
+                    },
+                  },
+                  then: { $toObjectId: "$recipeId" },
+                  else: "$recipeId",
+                },
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: "recipes",
+              localField: "convertedRecipeId",
+              foreignField: "_id",
+              as: "recipeDetails",
+            },
+          },
+          {
+            $addFields: { recipeInfo: { $arrayElemAt: ["$recipeDetails", 0] } },
+          },
+          { $project: { recipeDetails: 0, convertedRecipeId: 0 } },
+          { $sort: { createdAt: -1 } },
+        ];
+
+        const result = await favoriteCollection.aggregate(pipeline).toArray();
+        res.send({ success: true, data: result });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    app.delete("/favorites/:id", async (req, res) => {
+      try {
+        const result = await favoriteCollection.deleteOne({
+          _id: new ObjectId(req.params.id),
+        });
+        res.send({ success: true, deletedCount: result.deletedCount });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
       }
     });
   } catch (error) {
