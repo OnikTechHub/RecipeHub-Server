@@ -85,7 +85,7 @@ async function run() {
       }
     });
 
-    // 🛠️ ADDED FOR PROFILE PAGE SYNC
+    // ADDED FOR PROFILE PAGE SYNC
     app.get("/api/user/status", async (req, res) => {
       try {
         const { email } = req.query;
@@ -112,19 +112,34 @@ async function run() {
     // Recipe GET API (With Category $in & Search Filtering)
     app.get("/recipes", async (req, res) => {
       try {
-        const { search, category } = req.query;
+        const { search, category, page = 1, limit = 6 } = req.query;
         let query = {};
 
         if (search) {
           query.recipeName = { $regex: search, $options: "i" };
         }
-
         if (category && category !== "All") {
           query.category = { $in: [category] };
         }
+        const totalRecipes = await recipeCollection.countDocuments(query);
 
-        const result = await recipeCollection.find(query).toArray();
-        res.send({ success: true, data: result });
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        const result = await recipeCollection
+          .find(query)
+          .skip(skip)
+          .limit(limitNum)
+          .toArray();
+
+        res.send({
+          success: true,
+          data: result,
+          totalRecipes: totalRecipes,
+          totalPages: Math.ceil(totalRecipes / limitNum),
+          currentPage: pageNum,
+        });
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
       }
@@ -1070,7 +1085,7 @@ async function run() {
       }
     });
 
-    // All reports Api
+    // Admin All reports Api
     app.get("/reports", async (req, res) => {
       try {
         const result = await reportCollection
