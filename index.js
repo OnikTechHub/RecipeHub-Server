@@ -272,6 +272,23 @@ async function run() {
       }
     });
 
+    // Featured Recipes API
+    app.get("/featured-recipes", async (req, res) => {
+      try {
+        const result = await recipeCollection
+          .find({ isFeatured: true })
+          .sort({ featuredAt: -1 }) 
+          .toArray();
+
+        res.send({
+          success: true,
+          data: result,
+        });
+      } catch (error) {
+        res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
     //  STRIPE CHECKOUT & VERIFICATION INTEGRATION
 
     app.post("/create-checkout-session", async (req, res) => {
