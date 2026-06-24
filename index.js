@@ -277,7 +277,7 @@ async function run() {
       try {
         const result = await recipeCollection
           .find({ isFeatured: true })
-          .sort({ featuredAt: -1 }) 
+          .sort({ featuredAt: -1 })
           .toArray();
 
         res.send({
@@ -1156,6 +1156,23 @@ async function run() {
         res.send({ success: true, deletedCount: result.deletedCount });
       } catch (error) {
         res.status(500).send({ success: false, message: error.message });
+      }
+    });
+
+    // Transactions API
+    app.get("/admin/transactions", async (req, res) => {
+      try {
+        const transactions = await paymentCollection
+          .find()
+          .sort({ paidAt: -1 })
+          .toArray();
+
+        res.send(transactions);
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: error.message,
+        });
       }
     });
   } catch (error) {
