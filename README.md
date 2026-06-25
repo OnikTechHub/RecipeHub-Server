@@ -220,7 +220,7 @@ This project is licensed under the MIT License.
 
 ## 👨‍🍳 Developed By
 
-**Your Name**
+**Onik Das**
 
 📧 [onikdas.dev@gmail.com](mailto:your-email@example.com)
 
