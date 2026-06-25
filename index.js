@@ -14,7 +14,10 @@ const port = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: [process.env.CLIENT_URL].filter(Boolean),
+    origin: [
+      "http://localhost:3000",
+      "https://recipe-hub-client-two.vercel.app",
+    ],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "authorization"],
   }),
