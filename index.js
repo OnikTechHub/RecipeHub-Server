@@ -1,30 +1,27 @@
-require("dotenv").config();
-
-const dns = require("dns");
+const dns = require("node:dns");
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const express = require("express");
-const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const cors = require("cors");
+require("dotenv").config();
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
-const port = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://recipe-hub-client-two.vercel.app",
-    ],
+    origin: [process.env.CLIENT_URL],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "authorization"],
   }),
 );
+
 app.use(express.json());
 
-const uri = process.env.MONGO_DB_URI || process.env.MONGODB_URI;
+const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -1189,6 +1186,6 @@ app.get("/", (req, res) => {
   res.send("RecipeHub Production Server is Online!");
 });
 
-app.listen(port, () => {
-  console.log(`Server running smoothly on port: ${port}`);
+app.listen(PORT, () => {
+  console.log(`Server is perfectly running on port: ${PORT}`);
 });
