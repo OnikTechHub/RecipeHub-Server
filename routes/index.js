@@ -1,0 +1,19 @@
+const express = require("express");
+const router = express.Router();
+
+const userRoutes = require("./userRoutes");
+const recipeRoutes = require("./recipeRoutes");
+const paymentRoutes = require("./paymentRoutes");
+const favoriteRoutes = require("./favoriteRoutes");
+const reportRoutes = require("./reportRoutes");
+const adminRoutes = require("./adminRoutes");
+
+// Mount all modular routes
+router.use(userRoutes);
+router.use(recipeRoutes);
+router.use(paymentRoutes);
+router.use(favoriteRoutes);
+router.use(reportRoutes);
+router.use(adminRoutes);
+
+module.exports = router;
