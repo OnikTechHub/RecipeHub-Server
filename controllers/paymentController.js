@@ -18,7 +18,7 @@ const getStripe = () => {
  */
 const createCheckoutSession = async (req, res, next) => {
   try {
-    const { recipeId, title, image, price, userEmail, userId } = req.body;
+    const { recipeId, title, image, price, userEmail, email, userId } = req.body;
 
     if (!title || price === undefined || price === null) {
       return res.status(400).send({
@@ -27,13 +27,8 @@ const createCheckoutSession = async (req, res, next) => {
       });
     }
 
-    const clientOrigin = process.env.CLIENT_URL;
-    if (!clientOrigin) {
-      return res.status(500).send({
-        success: false,
-        message: "CLIENT_URL is missing in environment variables (.env)",
-      });
-    }
+    const clientOrigin = process.env.CLIENT_URL || "http://localhost:3000";
+    const targetEmail = (userEmail || email || req.user?.email || "").trim().toLowerCase();
 
     let finalTitle = title;
     let finalPrice = Number(price);
@@ -58,8 +53,7 @@ const createCheckoutSession = async (req, res, next) => {
       adminAmount = Number((finalPrice * 0.20).toFixed(2));
     }
 
-    const stripe = getStripe();
-    const session = await stripe.checkout.sessions.create({
+    const sessionConfig = {
       payment_method_types: ["card"],
       line_items: [
         {
@@ -78,7 +72,7 @@ const createCheckoutSession = async (req, res, next) => {
       metadata: {
         recipeId: recipeId || "membership_upgrade",
         title: finalTitle,
-        userEmail: (userEmail || "").toLowerCase(),
+        userEmail: targetEmail,
         userId: userId || "N/A",
         creatorEmail: creatorEmail,
         creatorEarnings: String(creatorAmount),
@@ -87,7 +81,14 @@ const createCheckoutSession = async (req, res, next) => {
       },
       success_url: `${clientOrigin}/dashboard/purchased-recipes?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${clientOrigin}/browse-recipes`,
-    });
+    };
+
+    if (targetEmail) {
+      sessionConfig.customer_email = targetEmail;
+    }
+
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     res.send({
       success: true,
