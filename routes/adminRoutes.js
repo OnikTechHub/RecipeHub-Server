@@ -8,8 +8,9 @@ const { validateObjectId } = require("../middlewares/validateMiddleware");
 // Admin Overview Statistics
 router.get("/admin-stats", optionalAuth, verifyAdmin, adminController.getAdminStats);
 
-// Manage Users
+// Manage Users & Admins
 router.get("/admin/users", optionalAuth, verifyAdmin, adminController.getUsers);
+router.get("/admin/admins", optionalAuth, verifyAdmin, adminController.getAdmins);
 router.patch(
   "/admin/users/block/:id",
   validateObjectId("id"),
@@ -30,6 +31,13 @@ router.patch(
   optionalAuth,
   verifyAdmin,
   adminController.makeUserAdmin
+);
+router.patch(
+  "/admin/users/role/:id",
+  validateObjectId("id"),
+  optionalAuth,
+  verifyAdmin,
+  adminController.updateUserRole
 );
 
 // Manage Recipes

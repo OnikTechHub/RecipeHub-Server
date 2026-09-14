@@ -158,6 +158,8 @@ const unblockUser = async (req, res, next) => {
   }
 };
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@recipehub.com";
+
 /**
  * Promote a user to Admin by ID
  * Route: PATCH /admin/users/make-admin/:id
@@ -174,6 +176,114 @@ const makeUserAdmin = async (req, res, next) => {
       success: true,
       message: "User successfully promoted to Administrator!",
       data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Dynamic User Role Update (Promote / Demote)
+ * Route: PATCH /admin/users/role/:id
+ */
+const updateUserRole = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role || !["admin", "user"].includes(role)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid role specified. Must be 'admin' or 'user'.",
+      });
+    }
+
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (targetUser.email === ADMIN_EMAIL || targetUser.email === "admin@recipehub.com") {
+      return res.status(400).send({
+        success: false,
+        message: "System Root Administrator role cannot be modified or demoted.",
+      });
+    }
+
+    const result = await User.updateOne(
+      { _id: id },
+      { $set: { role: role, updatedAt: new Date() } }
+    );
+
+    res.send({
+      success: true,
+      message: `User role successfully updated to ${role === "admin" ? "Administrator" : "Regular User"}.`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get all platform administrators
+ * Route: GET /admin/admins
+ */
+const getAdmins = async (req, res, next) => {
+  try {
+    const { page, limit, search } = req.query;
+
+    let filter = {
+      $or: [
+        { role: "admin" },
+        { email: ADMIN_EMAIL },
+        { email: "admin@recipehub.com" }
+      ]
+    };
+
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      filter = {
+        $and: [
+          {
+            $or: [
+              { role: "admin" },
+              { email: ADMIN_EMAIL },
+              { email: "admin@recipehub.com" }
+            ]
+          },
+          {
+            $or: [
+              { name: { $regex: q, $options: "i" } },
+              { email: { $regex: q, $options: "i" } }
+            ]
+          }
+        ]
+      };
+    }
+
+    const totalAdmins = await User.countDocuments(filter);
+
+    let pageNum = parseInt(page);
+    let limitNum = parseInt(limit);
+    const usePagination = !isNaN(pageNum) && !isNaN(limitNum) && limitNum > 0;
+
+    let query = User.find(filter).sort({ createdAt: -1 });
+    if (usePagination) {
+      const skip = (pageNum - 1) * limitNum;
+      query = query.skip(skip).limit(limitNum);
+    }
+
+    const result = await query.lean();
+    res.send({
+      success: true,
+      data: result,
+      totalAdmins,
+      totalPages: usePagination ? Math.ceil(totalAdmins / limitNum) || 1 : 1,
+      currentPage: usePagination ? pageNum : 1,
     });
   } catch (error) {
     next(error);
@@ -421,6 +531,8 @@ module.exports = {
   blockUser,
   unblockUser,
   makeUserAdmin,
+  updateUserRole,
+  getAdmins,
   getAdminRecipes,
   deleteAdminRecipe,
   updateAdminRecipe,
