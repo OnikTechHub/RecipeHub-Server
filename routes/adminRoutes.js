@@ -24,6 +24,13 @@ router.patch(
   verifyAdmin,
   adminController.unblockUser
 );
+router.patch(
+  "/admin/users/make-admin/:id",
+  validateObjectId("id"),
+  optionalAuth,
+  verifyAdmin,
+  adminController.makeUserAdmin
+);
 
 // Manage Recipes
 router.get("/admin/recipes", optionalAuth, verifyAdmin, adminController.getAdminRecipes);

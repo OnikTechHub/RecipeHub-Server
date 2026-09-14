@@ -33,6 +33,37 @@ const getAdminStats = async (req, res, next) => {
     const adminEarnings = financialStats[0]?.adminEarnings ? Number(financialStats[0].adminEarnings.toFixed(2)) : 0;
     const creatorEarnings = financialStats[0]?.creatorEarnings ? Number(financialStats[0].creatorEarnings.toFixed(2)) : 0;
 
+    // Monthly revenue aggregation for charts
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthlyAggregation = await Payment.aggregate([
+      { $match: { paymentStatus: "paid" } },
+      {
+        $group: {
+          _id: {
+            year: { $year: { $ifNull: ["$paidAt", "$createdAt"] } },
+            month: { $month: { $ifNull: ["$paidAt", "$createdAt"] } },
+          },
+          gross: { $sum: "$amount" },
+          net: { $sum: { $ifNull: ["$adminEarnings", "$amount"] } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]);
+
+    let monthlyChartData = monthlyAggregation.map((item) => ({
+      month: `${monthNames[(item._id.month || 1) - 1]} ${item._id.year || ''}`.trim(),
+      gross: Number((item.gross || 0).toFixed(2)),
+      net: Number((item.net || 0).toFixed(2)),
+      transactions: item.count || 0,
+    }));
+
+    if (monthlyChartData.length === 0) {
+      monthlyChartData = [
+        { month: "Current", gross: grossVolume, net: adminEarnings, transactions: financialStats[0]?.totalPaidTransactions || 0 }
+      ];
+    }
+
     res.send({
       success: true,
       data: {
@@ -43,6 +74,7 @@ const getAdminStats = async (req, res, next) => {
         grossVolume,
         adminEarnings,
         creatorEarnings,
+        monthlyChartData,
       },
     });
   } catch (error) {
@@ -51,15 +83,31 @@ const getAdminStats = async (req, res, next) => {
 };
 
 /**
- * Get all registered users
+ * Get registered users with pagination
  * Route: GET /admin/users
  */
 const getUsers = async (req, res, next) => {
   try {
-    const result = await User.find({}).lean();
+    const { page, limit } = req.query;
+    const totalUsers = await User.countDocuments();
+
+    let pageNum = parseInt(page);
+    let limitNum = parseInt(limit);
+    const usePagination = !isNaN(pageNum) && !isNaN(limitNum) && limitNum > 0;
+
+    let query = User.find({}).sort({ createdAt: -1 });
+    if (usePagination) {
+      const skip = (pageNum - 1) * limitNum;
+      query = query.skip(skip).limit(limitNum);
+    }
+
+    const result = await query.lean();
     res.send({
       success: true,
       data: result,
+      totalUsers,
+      totalPages: usePagination ? Math.ceil(totalUsers / limitNum) || 1 : 1,
+      currentPage: usePagination ? pageNum : 1,
     });
   } catch (error) {
     next(error);
@@ -103,6 +151,28 @@ const unblockUser = async (req, res, next) => {
     res.send({
       success: true,
       message: "User unblocked successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Promote a user to Admin by ID
+ * Route: PATCH /admin/users/make-admin/:id
+ */
+const makeUserAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await User.updateOne(
+      { _id: id },
+      { $set: { role: "admin", updatedAt: new Date() } }
+    );
+
+    res.send({
+      success: true,
+      message: "User successfully promoted to Administrator!",
       data: result,
     });
   } catch (error) {
@@ -230,6 +300,13 @@ const toggleFeatureRecipe = async (req, res, next) => {
  */
 const getAdminReports = async (req, res, next) => {
   try {
+    const { page, limit } = req.query;
+    const totalReports = await Report.countDocuments();
+
+    let pageNum = parseInt(page);
+    let limitNum = parseInt(limit);
+    const usePagination = !isNaN(pageNum) && !isNaN(limitNum) && limitNum > 0;
+
     const pipeline = [
       {
         $addFields: {
@@ -264,10 +341,19 @@ const getAdminReports = async (req, res, next) => {
       { $sort: { reportedAt: -1 } },
     ];
 
+    if (usePagination) {
+      const skip = (pageNum - 1) * limitNum;
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limitNum });
+    }
+
     const result = await Report.aggregate(pipeline);
     res.send({
       success: true,
       data: result,
+      totalReports,
+      totalPages: usePagination ? Math.ceil(totalReports / limitNum) || 1 : 1,
+      currentPage: usePagination ? pageNum : 1,
     });
   } catch (error) {
     next(error);
@@ -334,6 +420,7 @@ module.exports = {
   getUsers,
   blockUser,
   unblockUser,
+  makeUserAdmin,
   getAdminRecipes,
   deleteAdminRecipe,
   updateAdminRecipe,
