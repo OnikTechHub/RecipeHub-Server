@@ -232,8 +232,13 @@ const checkRecipeAccess = async (req, res, next) => {
       });
     }
 
-    // Free recipe
-    if (!recipe.isPaid || Number(recipe.price || 0) <= 0) {
+    // Strict Free vs Paid recipe check
+    const isPaidRecipe =
+      recipe.recipeType === "Paid" ||
+      recipe.isPaid === true ||
+      Number(recipe.price || 0) > 0;
+
+    if (!isPaidRecipe) {
       return res.send({
         success: true,
         hasAccess: true,
@@ -242,17 +247,19 @@ const checkRecipeAccess = async (req, res, next) => {
     }
 
     // Unauthenticated user attempting to access a paid recipe
-    if (!email) {
+    if (!email || !email.trim()) {
       return res.send({
         success: true,
         hasAccess: false,
         reason: "unauthenticated",
-        price: recipe.price,
+        price: recipe.price || 5,
       });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Author of the recipe
-    if (recipe.authorEmail && recipe.authorEmail.toLowerCase() === email.toLowerCase()) {
+    if (recipe.authorEmail && recipe.authorEmail.toLowerCase() === normalizedEmail) {
       return res.send({
         success: true,
         hasAccess: true,
@@ -260,10 +267,24 @@ const checkRecipeAccess = async (req, res, next) => {
       });
     }
 
-    // Check if user purchased this recipe
+    // Admin user access
+    const userDoc = await User.findByEmailWithFallback(normalizedEmail);
+    if (
+      normalizedEmail === ADMIN_EMAIL.toLowerCase() ||
+      normalizedEmail === "admin@recipehub.com" ||
+      (userDoc && userDoc.role === "admin")
+    ) {
+      return res.send({
+        success: true,
+        hasAccess: true,
+        reason: "admin",
+      });
+    }
+
+    // Check if user purchased THIS SPECIFIC recipe
     const purchased = await Payment.findOne({
-      userEmail: email.toLowerCase(),
-      recipeId: id,
+      userEmail: normalizedEmail,
+      recipeId: id.toString(),
       paymentStatus: "paid",
     });
 
@@ -279,7 +300,7 @@ const checkRecipeAccess = async (req, res, next) => {
       success: true,
       hasAccess: false,
       reason: "locked",
-      price: recipe.price,
+      price: recipe.price || 5,
     });
   } catch (error) {
     next(error);
