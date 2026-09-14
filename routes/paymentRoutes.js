@@ -18,6 +18,9 @@ router.get("/creator-earnings", optionalAuth, paymentController.getCreatorEarnin
 // Purchased recipe details verification
 router.get("/purchased-details/:id", optionalAuth, paymentController.getPurchasedDetails);
 
+// Purchased recipe IDs for user access check
+router.get("/user-purchased-ids", optionalAuth, paymentController.getUserPurchasedRecipeIds);
+
 // Membership upgrade webhook endpoint
 router.post("/api/payment-success-webhook", paymentController.paymentSuccessWebhook);
 

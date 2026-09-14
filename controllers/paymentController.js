@@ -111,6 +111,54 @@ const verifyPayment = async (req, res, next) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.payment_status === "paid") {
+      const userEmail = (session.metadata.userEmail || "").toLowerCase();
+
+      // Multi-item Cart Checkout Verification
+      if (session.metadata.isCartCheckout === "true" && session.metadata.cartItemsJson) {
+        const cartItems = JSON.parse(session.metadata.cartItemsJson);
+        const createdPayments = [];
+
+        for (let i = 0; i < cartItems.length; i++) {
+          const item = cartItems[i];
+          const txId = `${session.payment_intent}_${item.recipeId || i}`;
+
+          const existing = await Payment.findOne({ transactionId: txId });
+          if (existing) continue;
+
+          const itemPrice = Number(item.price || 5);
+          let creatorEarnings = 0;
+          let adminEarnings = itemPrice;
+
+          if (item.creatorEmail) {
+            creatorEarnings = Number((itemPrice * 0.80).toFixed(2));
+            adminEarnings = Number((itemPrice * 0.20).toFixed(2));
+          }
+
+          const paymentRecord = await Payment.create({
+            userEmail,
+            userId: userId || session.metadata.userId || "N/A",
+            amount: itemPrice,
+            recipeId: item.recipeId,
+            title: item.title || "Premium Recipe",
+            creatorEmail: item.creatorEmail || "",
+            creatorEarnings,
+            adminEarnings,
+            isPaidRecipe: true,
+            transactionId: txId,
+            paymentStatus: "paid",
+            paidAt: new Date(),
+          });
+          createdPayments.push(paymentRecord);
+        }
+
+        return res.send({
+          success: true,
+          message: "Cart items processed successfully",
+          count: createdPayments.length,
+        });
+      }
+
+      // Single Item Verification
       const existingPayment = await Payment.findOne({
         transactionId: session.payment_intent,
       });
@@ -155,6 +203,32 @@ const verifyPayment = async (req, res, next) => {
     res.status(400).send({
       success: false,
       message: "Payment status unverified",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get IDs of all paid recipes purchased by a user
+ * Route: GET /user-purchased-ids?email=...
+ */
+const getUserPurchasedRecipeIds = async (req, res, next) => {
+  try {
+    const { email } = req.query;
+    if (!email) {
+      return res.send({ success: true, purchasedRecipeIds: [] });
+    }
+    const payments = await Payment.find({
+      userEmail: email.trim().toLowerCase(),
+      paymentStatus: "paid",
+      isPaidRecipe: true,
+    }).select("recipeId").lean();
+
+    const purchasedRecipeIds = payments.map((p) => p.recipeId);
+    res.send({
+      success: true,
+      purchasedRecipeIds,
     });
   } catch (error) {
     next(error);
@@ -434,4 +508,5 @@ module.exports = {
   getCreatorEarnings,
   getPurchasedDetails,
   paymentSuccessWebhook,
+  getUserPurchasedRecipeIds,
 };
