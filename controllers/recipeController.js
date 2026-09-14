@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Recipe = require("../models/Recipe");
 const User = require("../models/User");
+const Payment = require("../models/Payment");
 
 /**
  * Get recipes with search, category filtering, and pagination
@@ -24,6 +25,7 @@ const getAllRecipes = async (req, res, next) => {
     const skip = (pageNum - 1) * limitNum;
 
     const result = await Recipe.find(query)
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
       .lean();
@@ -72,6 +74,13 @@ const getRecipeById = async (req, res, next) => {
 const createRecipe = async (req, res, next) => {
   try {
     const newRecipe = req.body;
+    if (newRecipe.isPaid) {
+      newRecipe.isPaid = true;
+      newRecipe.price = Math.max(0, Number(newRecipe.price) || 0);
+    } else {
+      newRecipe.isPaid = false;
+      newRecipe.price = 0;
+    }
 
     const user = await User.findByEmailWithFallback(newRecipe.authorEmail);
     const existingRecipesCount = await Recipe.countDocuments({
@@ -140,6 +149,7 @@ const toggleLike = async (req, res, next) => {
     res.send({
       success: true,
       isLiked: !hasLiked,
+      likesCount: hasLiked ? Math.max(0, (recipe.likesCount || 1) - 1) : (recipe.likesCount || 0) + 1,
     });
   } catch (error) {
     next(error);
@@ -153,7 +163,7 @@ const toggleLike = async (req, res, next) => {
 const getFeaturedRecipes = async (req, res, next) => {
   try {
     const result = await Recipe.find({ isFeatured: true })
-      .sort({ featuredAt: -1 })
+      .sort({ featuredAt: -1, createdAt: -1 })
       .lean();
 
     res.send({
@@ -166,12 +176,14 @@ const getFeaturedRecipes = async (req, res, next) => {
 };
 
 /**
- * Get recipes authored by a user
- * Route: GET /my-recipes?email=...
+ * Get recipes authored by a user with LIFO sorting and pagination
+ * Route: GET /my-recipes?email=...&page=...&limit=...
  */
 const getMyRecipes = async (req, res, next) => {
   try {
     const email = req.query.email;
+    const { page = 1, limit = 8 } = req.query;
+
     if (!email) {
       return res.status(400).send({
         success: false,
@@ -179,11 +191,95 @@ const getMyRecipes = async (req, res, next) => {
       });
     }
 
-    const result = await Recipe.find({ authorEmail: email }).lean();
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const totalRecipes = await Recipe.countDocuments({ authorEmail: email });
+    const result = await Recipe.find({ authorEmail: email })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
     res.send({
       success: true,
       message: "Recipes fetched successfully!",
       data: result,
+      totalRecipes,
+      totalPages: Math.ceil(totalRecipes / limitNum) || 1,
+      currentPage: pageNum,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Check if a user has access to full recipe contents
+ * Route: GET /recipes/:id/access?email=...
+ */
+const checkRecipeAccess = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.query;
+
+    const recipe = await Recipe.findById(id).lean();
+    if (!recipe) {
+      return res.status(404).send({
+        success: false,
+        message: "Recipe not found",
+      });
+    }
+
+    // Free recipe
+    if (!recipe.isPaid || Number(recipe.price || 0) <= 0) {
+      return res.send({
+        success: true,
+        hasAccess: true,
+        reason: "free",
+      });
+    }
+
+    // Unauthenticated user attempting to access a paid recipe
+    if (!email) {
+      return res.send({
+        success: true,
+        hasAccess: false,
+        reason: "unauthenticated",
+        price: recipe.price,
+      });
+    }
+
+    // Author of the recipe
+    if (recipe.authorEmail && recipe.authorEmail.toLowerCase() === email.toLowerCase()) {
+      return res.send({
+        success: true,
+        hasAccess: true,
+        reason: "author",
+      });
+    }
+
+    // Check if user purchased this recipe
+    const purchased = await Payment.findOne({
+      userEmail: email.toLowerCase(),
+      recipeId: id,
+      paymentStatus: "paid",
+    });
+
+    if (purchased) {
+      return res.send({
+        success: true,
+        hasAccess: true,
+        reason: "purchased",
+      });
+    }
+
+    return res.send({
+      success: true,
+      hasAccess: false,
+      reason: "locked",
+      price: recipe.price,
     });
   } catch (error) {
     next(error);
@@ -249,6 +345,14 @@ const updateRecipe = async (req, res, next) => {
     const updatedData = req.body;
     delete updatedData._id;
 
+    if (updatedData.isPaid !== undefined) {
+      if (updatedData.isPaid) {
+        updatedData.price = Math.max(0, Number(updatedData.price) || 0);
+      } else {
+        updatedData.price = 0;
+      }
+    }
+
     const result = await Recipe.updateOne({ _id: id }, { $set: updatedData });
 
     if (result.modifiedCount > 0 || result.matchedCount > 0) {
@@ -274,6 +378,7 @@ module.exports = {
   toggleLike,
   getFeaturedRecipes,
   getMyRecipes,
+  checkRecipeAccess,
   getRecipesCount,
   deleteRecipe,
   updateRecipe,

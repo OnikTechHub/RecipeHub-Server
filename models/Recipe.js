@@ -36,6 +36,11 @@ const recipeSchema = new mongoose.Schema(
     price: {
       type: Number,
       default: 0,
+      min: 0,
+    },
+    isPaid: {
+      type: Boolean,
+      default: false,
     },
     likesCount: {
       type: Number,

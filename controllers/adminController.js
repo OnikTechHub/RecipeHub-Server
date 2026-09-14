@@ -15,6 +15,24 @@ const getAdminStats = async (req, res, next) => {
     const totalPremiumMembers = await User.countDocuments({ isPremium: true });
     const totalReports = await Report.countDocuments();
 
+    // Financial revenue calculations
+    const financialStats = await Payment.aggregate([
+      { $match: { paymentStatus: "paid" } },
+      {
+        $group: {
+          _id: null,
+          grossVolume: { $sum: "$amount" },
+          adminEarnings: { $sum: { $ifNull: ["$adminEarnings", "$amount"] } },
+          creatorEarnings: { $sum: { $ifNull: ["$creatorEarnings", 0] } },
+          totalPaidTransactions: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const grossVolume = financialStats[0]?.grossVolume ? Number(financialStats[0].grossVolume.toFixed(2)) : 0;
+    const adminEarnings = financialStats[0]?.adminEarnings ? Number(financialStats[0].adminEarnings.toFixed(2)) : 0;
+    const creatorEarnings = financialStats[0]?.creatorEarnings ? Number(financialStats[0].creatorEarnings.toFixed(2)) : 0;
+
     res.send({
       success: true,
       data: {
@@ -22,6 +40,9 @@ const getAdminStats = async (req, res, next) => {
         totalRecipes,
         totalPremiumMembers,
         totalReports,
+        grossVolume,
+        adminEarnings,
+        creatorEarnings,
       },
     });
   } catch (error) {
@@ -95,10 +116,26 @@ const unblockUser = async (req, res, next) => {
  */
 const getAdminRecipes = async (req, res, next) => {
   try {
-    const result = await Recipe.find({}).lean();
+    const { page, limit } = req.query;
+    const totalRecipes = await Recipe.countDocuments();
+
+    let pageNum = parseInt(page);
+    let limitNum = parseInt(limit);
+    const usePagination = !isNaN(pageNum) && !isNaN(limitNum) && limitNum > 0;
+
+    let query = Recipe.find({}).sort({ createdAt: -1 });
+    if (usePagination) {
+      const skip = (pageNum - 1) * limitNum;
+      query = query.skip(skip).limit(limitNum);
+    }
+
+    const result = await query.lean();
     res.send({
       success: true,
       data: result,
+      totalRecipes,
+      totalPages: usePagination ? Math.ceil(totalRecipes / limitNum) || 1 : 1,
+      currentPage: usePagination ? pageNum : 1,
     });
   } catch (error) {
     next(error);
@@ -261,8 +298,32 @@ const dismissReport = async (req, res, next) => {
  */
 const getAdminTransactions = async (req, res, next) => {
   try {
-    const transactions = await Payment.find().sort({ paidAt: -1 }).lean();
-    res.send(transactions);
+    const { page, limit } = req.query;
+    const totalTransactions = await Payment.countDocuments();
+
+    let pageNum = parseInt(page);
+    let limitNum = parseInt(limit);
+    const usePagination = !isNaN(pageNum) && !isNaN(limitNum) && limitNum > 0;
+
+    let query = Payment.find({}).sort({ paidAt: -1, createdAt: -1 });
+    if (usePagination) {
+      const skip = (pageNum - 1) * limitNum;
+      query = query.skip(skip).limit(limitNum);
+    }
+
+    const transactions = await query.lean();
+
+    if (usePagination) {
+      res.send({
+        success: true,
+        data: transactions,
+        totalTransactions,
+        totalPages: Math.ceil(totalTransactions / limitNum) || 1,
+        currentPage: pageNum,
+      });
+    } else {
+      res.send(transactions);
+    }
   } catch (error) {
     next(error);
   }

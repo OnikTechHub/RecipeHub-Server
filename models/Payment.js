@@ -20,6 +20,24 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    creatorEmail: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      default: "",
+    },
+    creatorEarnings: {
+      type: Number,
+      default: 0,
+    },
+    adminEarnings: {
+      type: Number,
+      default: 0,
+    },
+    isPaidRecipe: {
+      type: Boolean,
+      default: false,
+    },
     title: {
       type: String,
       default: "",

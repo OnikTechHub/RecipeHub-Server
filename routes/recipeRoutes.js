@@ -19,6 +19,9 @@ router.get("/recipes", optionalAuth, recipeController.getAllRecipes);
 // Single recipe by ID
 router.get("/recipes/:id", validateObjectId("id"), optionalAuth, recipeController.getRecipeById);
 
+// Check access status for recipe
+router.get("/recipes/:id/access", validateObjectId("id"), optionalAuth, recipeController.checkRecipeAccess);
+
 // Create recipe
 router.post("/recipes", optionalAuth, recipeController.createRecipe);
 

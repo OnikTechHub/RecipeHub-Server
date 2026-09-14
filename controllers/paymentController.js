@@ -35,6 +35,29 @@ const createCheckoutSession = async (req, res, next) => {
       });
     }
 
+    let finalTitle = title;
+    let finalPrice = Number(price);
+    let creatorEmail = "";
+    let isPaidRecipe = false;
+
+    if (recipeId && recipeId !== "membership_upgrade") {
+      isPaidRecipe = true;
+      const targetRecipe = await Recipe.findById(recipeId).lean();
+      if (targetRecipe) {
+        finalTitle = targetRecipe.recipeName || title;
+        finalPrice = Number(targetRecipe.price) || finalPrice || 5;
+        creatorEmail = (targetRecipe.authorEmail || "").toLowerCase();
+      }
+    }
+
+    // Revenue breakdown: 80% to creator, 20% to admin/platform
+    let creatorAmount = 0;
+    let adminAmount = finalPrice;
+    if (isPaidRecipe && creatorEmail) {
+      creatorAmount = Number((finalPrice * 0.80).toFixed(2));
+      adminAmount = Number((finalPrice * 0.20).toFixed(2));
+    }
+
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -43,10 +66,10 @@ const createCheckoutSession = async (req, res, next) => {
           price_data: {
             currency: "usd",
             product_data: {
-              name: title,
+              name: finalTitle,
               images: image ? [image] : [],
             },
-            unit_amount: Math.round(Number(price) * 100),
+            unit_amount: Math.round(finalPrice * 100),
           },
           quantity: 1,
         },
@@ -54,8 +77,13 @@ const createCheckoutSession = async (req, res, next) => {
       mode: "payment",
       metadata: {
         recipeId: recipeId || "membership_upgrade",
-        userEmail: userEmail,
+        title: finalTitle,
+        userEmail: (userEmail || "").toLowerCase(),
         userId: userId || "N/A",
+        creatorEmail: creatorEmail,
+        creatorEarnings: String(creatorAmount),
+        adminEarnings: String(adminAmount),
+        isPaidRecipe: isPaidRecipe ? "true" : "false",
       },
       success_url: `${clientOrigin}/dashboard/purchased-recipes?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${clientOrigin}/browse-recipes`,
@@ -94,10 +122,15 @@ const verifyPayment = async (req, res, next) => {
       }
 
       const paymentData = {
-        userEmail: session.metadata.userEmail,
+        userEmail: (session.metadata.userEmail || "").toLowerCase(),
         userId: userId || session.metadata.userId || "N/A",
         amount: session.amount_total / 100,
         recipeId: session.metadata.recipeId,
+        title: session.metadata.title || "Premium Recipe Access",
+        creatorEmail: (session.metadata.creatorEmail || "").toLowerCase(),
+        creatorEarnings: Number(session.metadata.creatorEarnings || 0),
+        adminEarnings: Number(session.metadata.adminEarnings || 0),
+        isPaidRecipe: session.metadata.isPaidRecipe === "true",
         transactionId: session.payment_intent,
         paymentStatus: "paid",
         paidAt: new Date(),
@@ -128,16 +161,24 @@ const verifyPayment = async (req, res, next) => {
 };
 
 /**
- * Get user transaction history with joined recipe details
- * Route: GET /transactions?email=...
+ * Get user transaction history with joined recipe details, LIFO and pagination
+ * Route: GET /transactions?email=...&page=...&limit=...
  */
 const getTransactions = async (req, res, next) => {
   try {
     const userEmail = req.query.email;
+    const { page, limit } = req.query;
+
     let matchStage = {};
     if (userEmail) {
-      matchStage = { userEmail: userEmail };
+      matchStage = { userEmail: userEmail.toLowerCase() };
     }
+
+    const totalTransactions = await Payment.countDocuments(matchStage);
+
+    let pageNum = parseInt(page);
+    let limitNum = parseInt(limit);
+    const usePagination = !isNaN(pageNum) && !isNaN(limitNum) && limitNum > 0;
 
     const pipeline = [
       { $match: matchStage },
@@ -182,13 +223,90 @@ const getTransactions = async (req, res, next) => {
           convertedRecipeId: 0,
         },
       },
-      { $sort: { paidAt: -1 } },
+      { $sort: { paidAt: -1, createdAt: -1 } },
     ];
+
+    if (usePagination) {
+      const skip = (pageNum - 1) * limitNum;
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limitNum });
+    }
 
     const result = await Payment.aggregate(pipeline);
     res.send({
       success: true,
       data: result,
+      totalTransactions,
+      totalPages: usePagination ? Math.ceil(totalTransactions / limitNum) || 1 : 1,
+      currentPage: usePagination ? pageNum : 1,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get Creator revenue & commission statistics
+ * Route: GET /creator-earnings?email=...
+ */
+const getCreatorEarnings = async (req, res, next) => {
+  try {
+    const email = req.query.email;
+    if (!email) {
+      return res.status(400).send({
+        success: false,
+        message: "Email query parameter is required",
+      });
+    }
+
+    const creatorEmail = email.toLowerCase();
+    const { page = 1, limit = 10 } = req.query;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Total sales count & total earnings
+    const stats = await Payment.aggregate([
+      {
+        $match: {
+          creatorEmail: creatorEmail,
+          paymentStatus: "paid",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: "$creatorEarnings" },
+          totalSales: { $sum: 1 },
+          grossSalesVolume: { $sum: "$amount" },
+        },
+      },
+    ]);
+
+    const totalSales = stats[0]?.totalSales || 0;
+    const totalEarnings = stats[0]?.totalEarnings ? Number(stats[0].totalEarnings.toFixed(2)) : 0;
+    const grossSalesVolume = stats[0]?.grossSalesVolume ? Number(stats[0].grossSalesVolume.toFixed(2)) : 0;
+
+    // Paginated sales list
+    const sales = await Payment.find({
+      creatorEmail: creatorEmail,
+      paymentStatus: "paid",
+    })
+      .sort({ paidAt: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    res.send({
+      success: true,
+      data: {
+        totalEarnings,
+        totalSales,
+        grossSalesVolume,
+        sales,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalSales / limitNum) || 1,
+      },
     });
   } catch (error) {
     next(error);
@@ -213,7 +331,8 @@ const getPurchasedDetails = async (req, res, next) => {
 
     const paymentRecord = await Payment.findOne({
       recipeId: id,
-      userEmail: email,
+      userEmail: email.toLowerCase(),
+      paymentStatus: "paid",
     });
 
     if (!paymentRecord) {
@@ -234,8 +353,11 @@ const getPurchasedDetails = async (req, res, next) => {
         transactionId: paymentRecord.transactionId,
         userEmail: paymentRecord.userEmail,
         amount: paymentRecord.amount,
+        creatorEarnings: paymentRecord.creatorEarnings || 0,
+        adminEarnings: paymentRecord.adminEarnings || 0,
         paidAt: paymentRecord.paidAt || paymentRecord.createdAt,
         recipeImage: recipeRecord?.recipeImage || recipeRecord?.image || null,
+        recipeName: recipeRecord?.recipeName || "Premium Recipe",
         likesCount: recipeRecord?.likesCount || 0,
       },
     });
@@ -270,18 +392,21 @@ const paymentSuccessWebhook = async (req, res, next) => {
     }
 
     await Payment.create({
-      userEmail,
+      userEmail: userEmail.toLowerCase(),
       recipeId: "membership_upgrade",
       title: "RecipeHub Pro Premium Membership",
       price: 19.99,
       amount: 19.99,
+      adminEarnings: 19.99,
+      creatorEarnings: 0,
+      isPaidRecipe: false,
       transactionId,
       paymentStatus: "paid",
       paidAt: new Date(),
     });
 
     await User.updateOne(
-      { email: userEmail },
+      { email: userEmail.toLowerCase() },
       {
         $set: {
           isPremium: true,
@@ -305,6 +430,7 @@ module.exports = {
   createCheckoutSession,
   verifyPayment,
   getTransactions,
+  getCreatorEarnings,
   getPurchasedDetails,
   paymentSuccessWebhook,
 };
