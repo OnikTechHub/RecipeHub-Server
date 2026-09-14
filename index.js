@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config(); // Reloaded with SMTP configurations
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
