@@ -2,20 +2,33 @@
  * Gemini AI Service with 10-API Key Automatic Fallback & Rotation
  */
 
+const isRealKey = (key) => {
+  if (!key || typeof key !== "string") return false;
+  const trimmed = key.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("your_key_") || trimmed.startsWith("your_default_") || trimmed.includes("YOUR_KEY")) {
+    return false;
+  }
+  return true;
+};
+
 const getGeminiApiKeys = () => {
   const keys = [];
 
   // Collect GEMINI_API_KEY_1 to GEMINI_API_KEY_10
   for (let i = 1; i <= 10; i++) {
     const key = process.env[`GEMINI_API_KEY_${i}`];
-    if (key && key.trim()) {
+    if (isRealKey(key)) {
       keys.push(key.trim());
     }
   }
 
   // Fallback to standard GEMINI_API_KEY if no indexed keys exist
-  if (keys.length === 0 && process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()) {
-    keys.push(process.env.GEMINI_API_KEY.trim());
+  if (keys.length === 0) {
+    const defaultKey = process.env.GEMINI_API_KEY;
+    if (isRealKey(defaultKey)) {
+      keys.push(defaultKey.trim());
+    }
   }
 
   return keys;
@@ -50,13 +63,13 @@ const generateAIContent = async (prompt, systemInstruction = "") => {
   const apiKeys = getGeminiApiKeys();
 
   if (apiKeys.length === 0) {
-    console.error("Gemini API Error Details: No Gemini API keys configured in .env. Using Smart Culinary Fallback.");
+    console.error("Gemini API Error Details: No valid Gemini API keys configured in .env. Using Smart Culinary Fallback.");
     return getSmartCulinaryFallback(prompt);
   }
 
   let lastError = null;
   const totalKeys = apiKeys.length;
-  // Models to try (gemini-1.5-flash is primary stable chat model)
+  // Primary stable model: gemini-1.5-flash, Fallback: gemini-2.0-flash
   const models = ["gemini-1.5-flash", "gemini-2.0-flash"];
 
   for (let attempt = 0; attempt < totalKeys; attempt++) {
@@ -124,7 +137,7 @@ const generateAIContent = async (prompt, systemInstruction = "") => {
     }
   }
 
-  console.error("Gemini API Error Details: All 10 configured Gemini API keys failed or returned invalid key errors. Using Chef RecipeHub Smart Fallback.");
+  console.error("Gemini API Error Details: All configured Gemini API keys failed or returned invalid key errors. Using Chef RecipeHub Smart Fallback.");
   return getSmartCulinaryFallback(prompt);
 };
 
