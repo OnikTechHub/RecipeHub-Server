@@ -16,9 +16,20 @@ connectDB().catch((err) => {
 });
 
 // Configure CORS
+const allowedOrigins = [
+  CLIENT_URL,
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
+
 app.use(
   cors({
-    origin: [CLIENT_URL, "http://localhost:3000"],
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+):3000$/.test(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
     allowedHeaders: [
       "Content-Type",
