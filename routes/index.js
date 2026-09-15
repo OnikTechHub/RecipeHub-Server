@@ -8,6 +8,7 @@ const favoriteRoutes = require("./favoriteRoutes");
 const reportRoutes = require("./reportRoutes");
 const adminRoutes = require("./adminRoutes");
 const authRoutes = require("./authRoutes");
+const contactRoutes = require("./contactRoutes");
 
 // Mount all modular routes
 router.use(userRoutes);
@@ -17,5 +18,6 @@ router.use(favoriteRoutes);
 router.use(reportRoutes);
 router.use(adminRoutes);
 router.use(authRoutes);
+router.use(contactRoutes);
 
 module.exports = router;

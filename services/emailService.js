@@ -226,9 +226,55 @@ const sendRegistrationSuccessEmail = async (toEmail, name) => {
   });
 };
 
+/**
+ * Send contact form submission directly to system administrator email
+ */
+const sendContactAdminEmail = async ({ name, email, subject, message }) => {
+  const transporter = getTransporter();
+  const from = getSenderFrom();
+  const adminEmail = (process.env.ADMIN_EMAIL || process.env.SMTP_USER || "admin@recipehub.com").trim();
+
+  const htmlContent = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+      <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 28px 24px; text-align: center; color: white;">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 800;">📬 New Contact Inquiry</h1>
+        <p style="margin: 6px 0 0 0; font-size: 13px; opacity: 0.95;">RecipeHub Admin Notification</p>
+      </div>
+      <div style="padding: 28px 24px; color: #1f2937;">
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; p-4; margin-bottom: 20px; padding: 16px;">
+          <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>From:</strong> ${name} (&lt;<a href="mailto:${email}" style="color: #ea580c;">${email}</a>&gt;)</p>
+          <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Subject:</strong> ${subject || "General Inquiry"}</p>
+          <p style="margin: 0; font-size: 12px; color: #6b7280;"><strong>Date:</strong> ${new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" })}</p>
+        </div>
+        
+        <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: #374151;">Message Body:</h4>
+        <div style="background: #fff7ed; border-left: 4px solid #ea580c; border-radius: 6px; padding: 16px; font-size: 14px; color: #1f2937; line-height: 1.6; whitespace: pre-wrap;">
+          ${message}
+        </div>
+        
+        <p style="font-size: 12px; color: #9ca3af; margin: 24px 0 0 0; text-align: center;">
+          Reply directly to this email or send a response to <a href="mailto:${email}">${email}</a>.
+        </p>
+      </div>
+      <div style="background: #f9fafb; padding: 16px 24px; text-align: center; border-top: 1px solid #f3f4f6; font-size: 12px; color: #9ca3af;">
+        © ${new Date().getFullYear()} RecipeHub Server System
+      </div>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"${name} via RecipeHub" <${process.env.SMTP_USER}>`,
+    to: adminEmail,
+    replyTo: email,
+    subject: `[Contact Form] ${subject || "Inquiry"} - from ${name}`,
+    html: htmlContent,
+  });
+};
+
 module.exports = {
   sendRegistrationOtpEmail,
   sendRegistrationSuccessEmail,
   sendPasswordResetOtpEmail,
   sendLoginSuccessEmail,
+  sendContactAdminEmail,
 };
