@@ -2,6 +2,20 @@ const mongoose = require("mongoose");
 const Payment = require("../models/Payment");
 const User = require("../models/User");
 const Recipe = require("../models/Recipe");
+const Setting = require("../models/Setting");
+
+// Helper: fetch dynamic platform commission rate (%) from settings DB
+const getCommissionRate = async () => {
+  try {
+    const setting = await Setting.findOne({ key: "global_settings" }).lean();
+    if (setting && typeof setting.commissionRate === "number") {
+      return setting.commissionRate;
+    }
+  } catch (err) {
+    console.error("Error reading commission rate setting:", err.message);
+  }
+  return 20; // Default 20%
+};
 
 // Lazy initialize Stripe instance with environment secret
 const getStripe = () => {
@@ -95,12 +109,14 @@ const createCheckoutSession = async (req, res, next) => {
       }
     }
 
-    // Revenue breakdown: 80% to creator, 20% to admin/platform
+    // Dynamic Revenue breakdown based on global commission setting (%)
+    const commissionRate = await getCommissionRate();
+    const commissionFraction = commissionRate / 100;
     let creatorAmount = 0;
     let adminAmount = finalPrice;
     if (isPaidRecipe && creatorEmail) {
-      creatorAmount = Number((finalPrice * 0.80).toFixed(2));
-      adminAmount = Number((finalPrice * 0.20).toFixed(2));
+      adminAmount = Number((finalPrice * commissionFraction).toFixed(2));
+      creatorAmount = Number((finalPrice - adminAmount).toFixed(2));
     }
 
     const sessionConfig = {
@@ -167,6 +183,8 @@ const verifyPayment = async (req, res, next) => {
       if (session.metadata.isCartCheckout === "true" && session.metadata.cartItemsJson) {
         const cartItems = JSON.parse(session.metadata.cartItemsJson);
         const createdPayments = [];
+        const commissionRate = await getCommissionRate();
+        const commissionFraction = commissionRate / 100;
 
         for (let i = 0; i < cartItems.length; i++) {
           const item = cartItems[i];
@@ -180,8 +198,8 @@ const verifyPayment = async (req, res, next) => {
           let adminEarnings = itemPrice;
 
           if (item.creatorEmail) {
-            creatorEarnings = Number((itemPrice * 0.80).toFixed(2));
-            adminEarnings = Number((itemPrice * 0.20).toFixed(2));
+            adminEarnings = Number((itemPrice * commissionFraction).toFixed(2));
+            creatorEarnings = Number((itemPrice - adminEarnings).toFixed(2));
           }
 
           const paymentRecord = await Payment.create({

@@ -3,6 +3,7 @@ const User = require("../models/User");
 const Recipe = require("../models/Recipe");
 const Report = require("../models/Report");
 const Payment = require("../models/Payment");
+const Setting = require("../models/Setting");
 
 /**
  * Get aggregated statistics for admin dashboard
@@ -443,11 +444,21 @@ const getAdminReports = async (req, res, next) => {
         },
       },
       {
-        $addFields: {
-          recipeInfo: { $arrayElemAt: ["$targetRecipe", 0] },
+        $lookup: {
+          from: "reports",
+          localField: "recipeId",
+          foreignField: "recipeId",
+          as: "allRecipeReports",
         },
       },
-      { $project: { targetRecipe: 0, convertedRecipeId: 0 } },
+      {
+        $addFields: {
+          recipeInfo: { $arrayElemAt: ["$targetRecipe", 0] },
+          recipeReportCount: { $size: "$allRecipeReports" },
+          recipeAllReports: "$allRecipeReports",
+        },
+      },
+      { $project: { targetRecipe: 0, convertedRecipeId: 0, allRecipeReports: 0 } },
       { $sort: { reportedAt: -1 } },
     ];
 
@@ -525,6 +536,67 @@ const getAdminTransactions = async (req, res, next) => {
   }
 };
 
+/**
+ * Get global settings (commission rate)
+ * Route: GET /admin/settings
+ */
+const getAdminSettings = async (req, res, next) => {
+  try {
+    let setting = await Setting.findOne({ key: "global_settings" }).lean();
+    if (!setting) {
+      setting = await Setting.create({
+        key: "global_settings",
+        commissionRate: 20,
+        updatedBy: "admin",
+      });
+    }
+    res.send({
+      success: true,
+      settings: setting,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update global settings (commission rate)
+ * Route: POST /admin/settings
+ */
+const updateAdminSettings = async (req, res, next) => {
+  try {
+    const { commissionRate } = req.body;
+    const rate = Number(commissionRate);
+
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      return res.status(400).send({
+        success: false,
+        message: "Commission rate must be a number between 0 and 100",
+      });
+    }
+
+    const updated = await Setting.findOneAndUpdate(
+      { key: "global_settings" },
+      {
+        $set: {
+          commissionRate: rate,
+          updatedBy: req.user?.email || "admin",
+          updatedAt: new Date(),
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+    res.send({
+      success: true,
+      message: `Global platform commission updated to ${rate}%!`,
+      settings: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAdminStats,
   getUsers,
@@ -540,4 +612,6 @@ module.exports = {
   getAdminReports,
   dismissReport,
   getAdminTransactions,
+  getAdminSettings,
+  updateAdminSettings,
 };

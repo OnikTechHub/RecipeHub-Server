@@ -77,4 +77,8 @@ router.delete(
 // Manage Transactions
 router.get("/admin/transactions", optionalAuth, verifyAdmin, adminController.getAdminTransactions);
 
+// Manage Settings (Platform Commission)
+router.get("/admin/settings", optionalAuth, verifyAdmin, adminController.getAdminSettings);
+router.post("/admin/settings", optionalAuth, verifyAdmin, adminController.updateAdminSettings);
+
 module.exports = router;
