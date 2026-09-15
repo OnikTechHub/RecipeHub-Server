@@ -57,7 +57,18 @@ const getSmartCulinaryFallback = (rawQuery) => {
     return "🌟 **RecipeHub Premium Membership** unlocks exclusive culinary features:\n\n- 🔓 **Unlimited Recipe Access:** View all secret chef recipes.\n- 🤖 **Chef AI Assistant:** Unlimited 24/7 cooking guidance.\n- ⚡ **Ad-Free Browsing:** Seamless cooking experience.\n- 💎 **Exclusive Badges:** Showcase your chef status on community recipes.\n\nVisit our **Pricing** page to upgrade today!";
   }
 
-  // 3. Baking & Vegan Egg / Dairy Substitutes (High Priority Check)
+  // 3. Multi-Course Dinner Parties, Italian Cuisine & Custom Menu Planning (High Priority)
+  if (
+    lower.includes("party") || lower.includes("menu") || lower.includes("italian") || 
+    lower.includes("course") || lower.includes("dinner party") || lower.includes("catering") || lower.includes("guest")
+  ) {
+    let cuisineType = "Gourmet Dinner Party";
+    if (lower.includes("italian")) cuisineType = "Classic Italian Dinner";
+
+    return `🍷 **Chef RecipeHub's ${cuisineType} Menu & Prep Guide**:\n\n### 🇮🇹 **Sample 3-Course Menu:**\n1. **Appetizer (Antipasto):** Fresh Tomato Basil Bruschetta drizzled with aged balsamic glaze & extra virgin olive oil.\n2. **Main Course (Primo/Secondo):** Creamy Tuscan Garlic Chicken or Homemade Penne alla Vodka served with warm garlic bread.\n3. **Dessert (Dolce):** Traditional Espresso Tiramisu or Lemon Panna Cotta.\n\n### 👨‍🍳 **Host & Prep Guidelines:**\n- **Make-Ahead Items:** Prepare desserts and marinate proteins 4-6 hours before guests arrive.\n- **Scaling Portions:** Multiply ingredients proportionately and increase cooking times slightly for larger serving batches.\n- **Wine Pairing:** Pair rich garlic/cream pasta with crisp Pinot Grigio or medium-bodied Chianti. 🥂`;
+  }
+
+  // 4. Baking & Vegan Egg / Dairy Substitutes
   if (
     lower.includes("substitute") || lower.includes("replace") || lower.includes("swap") || 
     lower.includes("vegan") || (lower.includes("egg") && (lower.includes("cake") || lower.includes("bake") || lower.includes("chocolate") || lower.includes("cookie")))
@@ -70,12 +81,15 @@ const getSmartCulinaryFallback = (rawQuery) => {
     return `🍰 **Chef RecipeHub's Best Plant-Based Binding Substitutes for ${target}**:\n\n1. **Flaxseed or Chia Egg (Best for Binding & Dense Cakes):**\n   - **Ratio:** 1 tbsp ground flaxseed/chia + 3 tbsp warm water (let sit for 5 mins until gelatinous = 1 egg).\n   - **Texture Effect:** Gives structure and a slightly dense, moist crumb with subtle nutty undertones.\n\n2. **Unsweetened Applesauce or Mashed Banana (Best for Moisture):**\n   - **Ratio:** 1/4 cup per egg.\n   - **Texture Effect:** Leaves the cake extra tender and soft; adds gentle natural sweetness.\n\n3. **Silken Tofu or Aquafaba (Best for Fluffiness):**\n   - **Ratio:** 1/4 cup blended silken tofu or 3 tbsp whipped chickpea water (aquafaba) = 1 egg.\n   - **Texture Effect:** Provides light, airy lifting power without altering flavor profile.\n\n*Pro Baking Tip:* When replacing eggs in chocolate cakes, adding 1/2 tsp of baking soda + 1 tbsp apple cider vinegar creates extra fluffy leavening! 🍫`;
   }
 
-  // 4. General Cakes & Baking Questions (non-substitute)
-  if (lower.includes("cake") || lower.includes("chocolate") || lower.includes("bake") || lower.includes("dessert") || lower.includes("pastry") || lower.includes("cookie")) {
+  // 5. Dedicated Cakes & Baking Questions (ONLY when not a dinner/party/menu query)
+  if (
+    (lower.includes("cake") || lower.includes("chocolate") || lower.includes("bake") || lower.includes("pastry") || lower.includes("cookie")) &&
+    !lower.includes("menu") && !lower.includes("party") && !lower.includes("dinner")
+  ) {
     return `🍰 **Chef RecipeHub Baking Tips for "${query}"**:\n\n1. **Room Temperature Ingredients:** Always bring liquid ingredients, butter, and plant milks to room temperature before mixing.\n2. **Don't Overmix:** Fold wet and dry ingredients gently until just combined to keep texture tender.\n3. **Oven Precision:** Pre-heat your oven fully and avoid opening the oven door during the first 20 minutes of baking.\n\nCheck out the **Recipes** tab on RecipeHub for community-rated cake and dessert guides! 🍫`;
   }
 
-  // 5. Savory Meals & Dishes (Chicken, Beef, Fish, Pasta, Rice, Salad, Soup)
+  // 6. Savory Meals & Dishes (Chicken, Beef, Fish, Pasta, Rice, Salad, Soup, Dinner)
   if (
     lower.includes("chicken") || lower.includes("beef") || lower.includes("fish") || lower.includes("salmon") || 
     lower.includes("pasta") || lower.includes("rice") || lower.includes("salad") || lower.includes("soup") || 
@@ -91,7 +105,7 @@ const getSmartCulinaryFallback = (rawQuery) => {
     return `👨‍🍳 **Chef RecipeHub Guide for "${query}"**:\n\n1. **Preparation:** Always prep and measure ingredients (mise en place) before starting to ensure smooth cooking.\n2. **Flavor Enhancers:** Use fresh garlic, aromatic herbs, and a touch of quality oil or butter.\n3. **Pro Tip:** Season in layers throughout cooking rather than all at the end.\n\nLooking for full community recipes for **${dishName}**? Check out the **Recipes** tab on RecipeHub! 🥘`;
   }
 
-  // 6. General Fallback for Custom Queries
+  // 7. General Fallback for Custom Queries
   return `👨‍🍳 **Chef RecipeHub Culinary Assistant**:
 
 Thank you for your question regarding **"${query}"**!
