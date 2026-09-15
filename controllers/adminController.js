@@ -4,6 +4,7 @@ const Recipe = require("../models/Recipe");
 const Report = require("../models/Report");
 const Payment = require("../models/Payment");
 const Setting = require("../models/Setting");
+const { getApiPoolAnalytics } = require("../services/geminiService");
 
 /**
  * Get aggregated statistics for admin dashboard
@@ -65,6 +66,8 @@ const getAdminStats = async (req, res, next) => {
       ];
     }
 
+    const apiAnalytics = getApiPoolAnalytics();
+
     res.send({
       success: true,
       data: {
@@ -76,7 +79,24 @@ const getAdminStats = async (req, res, next) => {
         adminEarnings,
         creatorEarnings,
         monthlyChartData,
+        apiAnalytics,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get dedicated API Usage & Quota Analytics
+ * Route: GET /admin/api-analytics
+ */
+const getAdminApiAnalytics = async (req, res, next) => {
+  try {
+    const analytics = getApiPoolAnalytics();
+    res.send({
+      success: true,
+      data: analytics,
     });
   } catch (error) {
     next(error);
@@ -689,6 +709,7 @@ const updateAdminSettings = async (req, res, next) => {
 
 module.exports = {
   getAdminStats,
+  getAdminApiAnalytics,
   getUsers,
   blockUser,
   unblockUser,

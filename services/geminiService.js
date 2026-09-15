@@ -37,6 +37,79 @@ const getGeminiApiKeys = () => {
 // Global index tracking for round-robin load distribution
 let currentKeyIndex = 0;
 
+// API Call & Quota Tracking System
+const apiCallTracker = new Map();
+let totalSystemCallsCount = 0;
+
+const recordApiKeyCall = (apiKey) => {
+  totalSystemCallsCount++;
+  if (!apiKey) return;
+  const now = Date.now();
+  const entry = apiCallTracker.get(apiKey) || { count: 0, lastReset: now };
+
+  if (now - entry.lastReset > 24 * 60 * 60 * 1000) {
+    entry.count = 0;
+    entry.lastReset = now;
+  }
+
+  entry.count += 1;
+  apiCallTracker.set(apiKey, entry);
+};
+
+const getApiPoolAnalytics = () => {
+  const keys = getGeminiApiKeys();
+  const activeKeysCount = keys.length > 0 ? keys.length : 1;
+  const capacityPerKey = 1500; // Gemini Free tier daily request limit per key
+  const totalSystemCapacity = activeKeysCount * capacityPerKey;
+
+  let totalRequestsUsed = 0;
+  const keyDetails = [];
+
+  if (keys.length > 0) {
+    keys.forEach((key, index) => {
+      const tracker = apiCallTracker.get(key) || { count: 0 };
+      totalRequestsUsed += tracker.count;
+
+      const masked = key.length > 10 ? `${key.substring(0, 6)}...${key.substring(key.length - 4)}` : `API_KEY_${index + 1}`;
+      const usagePct = Number(((tracker.count / capacityPerKey) * 100).toFixed(1));
+
+      keyDetails.push({
+        id: `key_${index + 1}`,
+        name: `Gemini Key #${index + 1}`,
+        maskedKey: masked,
+        callsToday: tracker.count,
+        capacity: capacityPerKey,
+        usagePercent: usagePct,
+        status: tracker.count >= capacityPerKey ? "Exhausted" : "Active",
+      });
+    });
+  } else {
+    totalRequestsUsed = totalSystemCallsCount;
+    keyDetails.push({
+      id: "key_default",
+      name: "Default Gemini Key",
+      maskedKey: "GEMINI_DEFAULT",
+      callsToday: totalRequestsUsed,
+      capacity: capacityPerKey,
+      usagePercent: Number(((totalRequestsUsed / capacityPerKey) * 100).toFixed(1)),
+      status: "Active",
+    });
+  }
+
+  // Calculate Aggregated System Percentage
+  const aggregatedUsagePercent = Number(((totalRequestsUsed / totalSystemCapacity) * 100).toFixed(2));
+
+  return {
+    activeKeysCount,
+    totalSystemCapacity,
+    totalRequestsUsed,
+    remainingQuota: Math.max(0, totalSystemCapacity - totalRequestsUsed),
+    aggregatedUsagePercent: Math.min(100, aggregatedUsagePercent),
+    keyDetails,
+    lastUpdated: new Date(),
+  };
+};
+
 /**
  * Smart Culinary Fallback Generator when Gemini API keys are invalid/quota exceeded
  */
@@ -209,6 +282,8 @@ const generateAIContent = async (prompt, systemInstruction = "", userQuery = "")
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+
+        recordApiKeyCall(selectedKey);
 
         const data = await response.json();
 
@@ -433,4 +508,6 @@ module.exports = {
   getGeminiApiKeys,
   generateAIContent,
   generateAIRecipe,
+  getApiPoolAnalytics,
+  recordApiKeyCall,
 };
