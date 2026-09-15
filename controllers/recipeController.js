@@ -7,34 +7,114 @@ const Payment = require("../models/Payment");
  * Get recipes with search, category filtering, and pagination
  * Route: GET /recipes
  */
+/**
+ * Get recipes with search, category filtering, access/pricing filtering, and deterministic pagination
+ * Route: GET /recipes
+ */
 const getAllRecipes = async (req, res, next) => {
   try {
-    const { search, category, page = 1, limit = 6 } = req.query;
+    const { search, category, filter = "all", email, page = 1, limit = 6 } = req.query;
     let query = {};
 
-    if (search) {
-      query.recipeName = { $regex: search, $options: "i" };
+    if (search && search.trim()) {
+      query.recipeName = { $regex: search.trim(), $options: "i" };
     }
     if (category && category !== "All") {
       query.category = { $in: [category] };
     }
 
+    const cleanFilter = (filter || "all").toLowerCase().trim();
+
+    if (cleanFilter === "free") {
+      query.$or = [
+        { recipeType: "Free" },
+        { isPaid: false },
+        { isPaid: { $exists: false } },
+        { price: 0 },
+        { price: { $exists: false } },
+      ];
+    } else if (cleanFilter === "paid") {
+      query.$or = [
+        { recipeType: "Paid" },
+        { isPaid: true },
+        { price: { $gt: 0 } },
+      ];
+    } else if (cleanFilter === "purchased") {
+      if (!email || !email.trim()) {
+        return res.send({
+          success: true,
+          data: [],
+          totalRecipes: 0,
+          totalPages: 1,
+          currentPage: 1,
+        });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const userDoc = await User.findByEmailWithFallback(normalizedEmail);
+      const isAdminUser =
+        normalizedEmail === (process.env.ADMIN_EMAIL || "admin@recipehub.com").toLowerCase() ||
+        normalizedEmail === "admin@recipehub.com" ||
+        (userDoc && userDoc.role === "admin");
+
+      if (isAdminUser) {
+        query.$or = [
+          { recipeType: "Paid" },
+          { isPaid: true },
+          { price: { $gt: 0 } },
+        ];
+      } else {
+        const payments = await Payment.find({
+          userEmail: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") },
+          paymentStatus: "paid",
+        }).select("recipeId items").lean();
+
+        const purchasedIds = [];
+        payments.forEach((p) => {
+          if (p.recipeId) purchasedIds.push(p.recipeId.toString());
+          if (Array.isArray(p.items)) {
+            p.items.forEach((item) => {
+              if (item.recipeId) purchasedIds.push(item.recipeId.toString());
+            });
+          }
+        });
+
+        query.$or = [
+          { authorEmail: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") } },
+          { userEmail: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") } },
+          { email: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") } },
+          { _id: { $in: purchasedIds } },
+        ];
+      }
+    }
+
     const totalRecipes = await Recipe.countDocuments(query);
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.max(1, parseInt(limit) || 6);
     const skip = (pageNum - 1) * limitNum;
 
+    // Tie-break with _id: -1 for deterministic pagination (prevents duplicate items across pages)
     const result = await Recipe.find(query)
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1, _id: -1 })
       .skip(skip)
       .limit(limitNum)
       .lean();
 
+    // Deduplicate result by _id
+    const uniqueMap = new Map();
+    result.forEach((item) => {
+      const idStr = item._id.toString();
+      if (!uniqueMap.has(idStr)) {
+        uniqueMap.set(idStr, item);
+      }
+    });
+    const uniqueResult = Array.from(uniqueMap.values());
+
     res.send({
       success: true,
-      data: result,
+      data: uniqueResult,
       totalRecipes,
-      totalPages: Math.ceil(totalRecipes / limitNum),
+      totalPages: Math.ceil(totalRecipes / limitNum) || 1,
       currentPage: pageNum,
     });
   } catch (error) {

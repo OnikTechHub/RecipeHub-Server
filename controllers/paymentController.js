@@ -301,19 +301,29 @@ const verifyPayment = async (req, res, next) => {
 const getUserPurchasedRecipeIds = async (req, res, next) => {
   try {
     const { email } = req.query;
-    if (!email) {
+    if (!email || !email.trim()) {
       return res.send({ success: true, purchasedRecipeIds: [] });
     }
+    const cleanEmail = email.trim().toLowerCase();
     const payments = await Payment.find({
-      userEmail: email.trim().toLowerCase(),
+      userEmail: { $regex: new RegExp("^" + cleanEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") },
       paymentStatus: "paid",
-      isPaidRecipe: true,
-    }).select("recipeId").lean();
+    }).select("recipeId items").lean();
 
-    const purchasedRecipeIds = payments.map((p) => p.recipeId);
+    const purchasedSet = new Set();
+    payments.forEach((p) => {
+      if (p.recipeId) purchasedSet.add(p.recipeId.toString());
+      if (Array.isArray(p.items)) {
+        p.items.forEach((item) => {
+          if (item.recipeId) purchasedSet.add(item.recipeId.toString());
+          if (item._id) purchasedSet.add(item._id.toString());
+        });
+      }
+    });
+
     res.send({
       success: true,
-      purchasedRecipeIds,
+      purchasedRecipeIds: Array.from(purchasedSet),
     });
   } catch (error) {
     next(error);
