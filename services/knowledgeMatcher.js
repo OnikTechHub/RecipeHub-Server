@@ -36,7 +36,7 @@ const matchLocalKnowledge = (userQuery) => {
   const cleanQuery = userQuery.toLowerCase().replace(/[?.,!:]/g, "").trim();
 
   // Guard: If user query is a specific culinary dish request, bypass platform FAQs unless platform terms are present
-  const culinaryKeywords = ["cake", "chocolate", "bake", "cookie", "salmon", "chicken", "beef", "pasta", "salad", "soup", "fry", "roast", "grill"];
+  const culinaryKeywords = ["cake", "chocolate", "bake", "cookie", "salmon", "chicken", "beef", "pasta", "salad", "soup", "fry", "roast", "grill", "bowl", "breakfast", "sweet potato", "potato", "crispy", "vegetable", "veggie", "shepherd", "pie", "ground beef", "cottage pie"];
   const platformScopeKeywords = ["recipehub", "recipe hub", "platform", "website", "app", "membership", "stripe", "account", "login", "signup", "dashboard", "upload", "creator"];
 
   const hasCulinaryContext = culinaryKeywords.some((ck) => cleanQuery.includes(ck));

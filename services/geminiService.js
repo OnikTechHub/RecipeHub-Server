@@ -57,7 +57,31 @@ const getSmartCulinaryFallback = (rawQuery) => {
     return "🌟 **RecipeHub Premium Membership** unlocks exclusive culinary features:\n\n- 🔓 **Unlimited Recipe Access:** View all secret chef recipes.\n- 🤖 **Chef AI Assistant:** Unlimited 24/7 cooking guidance.\n- ⚡ **Ad-Free Browsing:** Seamless cooking experience.\n- 💎 **Exclusive Badges:** Showcase your chef status on community recipes.\n\nVisit our **Pricing** page to upgrade today!";
   }
 
-  // 3. Multi-Course Dinner Parties, Italian Cuisine & Custom Menu Planning (High Priority)
+  // 3. Shepherd's Pie, Cottage Pie & Ground Beef Casserole with Crispy Potato Topping (High Priority)
+  if (
+    lower.includes("shepherd") || lower.includes("cottage pie") ||
+    (lower.includes("ground beef") && (lower.includes("potato") || lower.includes("pie") || lower.includes("crust"))) ||
+    (lower.includes("pie") && lower.includes("potato"))
+  ) {
+    return `🥧 **Chef RecipeHub's Classic Shepherd's Pie & Crispy Potato Crust Guide**:\n\n### 🥩 **1. Rich Savory Meat Filling:**\n- **Base Ingredients:** 500g ground beef or lamb, 1 finely chopped onion, 2 diced carrots, 1/2 cup peas, 2 cloves minced garlic, 2 tbsp tomato paste, 1 tbsp Worcestershire sauce, 1 cup beef broth, 1 tsp thyme & rosemary.\n- **Preparation:** Brown the ground meat in a deep skillet over medium-high heat. Add garlic, onions, and carrots; cook for 4 minutes. Stir in tomato paste, Worcestershire sauce, seasonings, and 1 tbsp flour to thicken. Pour in beef broth and simmer gently for 10 minutes until thick and savory.\n\n### 🥔 **2. Golden Crispy Mashed Potato Crust Hacks:**\n- **Mash Recipe:** Boil 800g Yukon Gold or Russet potatoes until fork-tender. Drain thoroughly and mash with 3 tbsp butter, 1/4 cup heavy cream or milk, 1 egg yolk (for rich golden color & structure), salt, and 1/4 cup grated cheddar or Parmesan.\n- **Fork-Peak Technique:** Spread the mashed potatoes evenly over the meat filling in your baking dish. Use a fork to drag across the top, creating **deep ridges and peaks** across the entire surface.\n\n### ⚡ **3. Baking & Broiling for Maximum Crunch:**\n- **Bake:** Bake at **400°F (200°C)** for 20-25 minutes until bubbling.\n- **High Broiler Finish:** Switch oven setting to **BROIL (High) for 3-5 minutes** at the very end. Watch closely as the fork-roughed potato peaks turn golden brown, deeply crispy, and crunchy!\n\n*Pro Chef Tip:* Let the pie rest for 10 minutes before slicing so the savory meat layers set cleanly without running! 🧀🔥`;
+  }
+
+  // 4. Healthy Breakfast Bowls & Sweet Potato Crispy Hacks (High Priority)
+  const isShepherdOrBeef = lower.includes("shepherd") || lower.includes("pie") || lower.includes("ground beef") || lower.includes("cottage pie");
+  if (
+    !isShepherdOrBeef &&
+    (
+      lower.includes("sweet potato") || 
+      lower.includes("breakfast bowl") || lower.includes("veggie bowl") || lower.includes("power bowl") ||
+      (lower.includes("sweet potato") && lower.includes("crispy")) ||
+      (lower.includes("crispy") && lower.includes("breakfast")) ||
+      (lower.includes("vegetable") && (lower.includes("crispy") || lower.includes("technique") || lower.includes("hack")))
+    )
+  ) {
+    return `🥣 **Chef RecipeHub's Healthy Breakfast Bowl & Crispy Sweet Potato Guide**:\n\n### 🥔 **The Ultimate Crispy Sweet Potato Cube Hacks:**\n1. **Parboil & Steam Dry (Crucial Step):** Cut sweet potatoes into uniform 1/2-inch cubes. Parboil in salted boiling water for **3 minutes**, then drain thoroughly and let steam dry on paper towels for 5 minutes. (Removing surface moisture ensures maximum crunch!)\n2. **The Starch Toss:** Lightly toss the dry cubes with 1-2 tsp of **cornstarch or tapioca starch** plus a drizzle of olive/avocado oil, sea salt, garlic powder, and smoked paprika.\n3. **High-Heat Roast or Pan-Sear:**\n   - **Oven/Air Fryer:** Spread evenly on a baking sheet without overcrowding. Bake at **425°F (220°C)** or Air Fry at **400°F (200°C)** for 20-25 minutes, shaking halfway.\n   - **Pan-Sear:** Sear in a hot cast-iron skillet over medium-high heat undisturbed for 3-4 minutes per side until golden brown and crispy.\n\n### 🥗 **Building a Balanced Healthy Breakfast Power Bowl:**\n- **Base:** 1 cup warm quinoa, brown rice, or massaged kale/spinach.\n- **Roasted Veggies & Carbs:** 1 cup Crispy Sweet Potato Cubes.\n- **Clean Protein:** 2 poached or soft-boiled eggs (or spiced scrambled tofu/chickpeas for vegan option).\n- **Healthy Fats:** 1/2 sliced ripe avocado + 1 tbsp toasted pumpkin seeds (pepitas).\n- **Signature Dressing:** Whisk 2 tbsp Tahini + 1 tbsp Lemon Juice + 1 tbsp warm water + pinch of salt & garlic powder.\n\n*Pro Chef Tip:* Never overcrowd your sheet pan or skillet—steam trapped between crowded vegetable cubes will make them soggy instead of ultra-crispy! 🥑✨`;
+  }
+
+  // 4. Multi-Course Dinner Parties, Italian Cuisine & Custom Menu Planning (High Priority)
   if (
     lower.includes("party") || lower.includes("menu") || lower.includes("italian") || 
     lower.includes("course") || lower.includes("dinner party") || lower.includes("catering") || lower.includes("guest")
@@ -66,6 +90,16 @@ const getSmartCulinaryFallback = (rawQuery) => {
     if (lower.includes("italian")) cuisineType = "Classic Italian Dinner";
 
     return `🍷 **Chef RecipeHub's ${cuisineType} Menu & Prep Guide**:\n\n### 🇮🇹 **Sample 3-Course Menu:**\n1. **Appetizer (Antipasto):** Fresh Tomato Basil Bruschetta drizzled with aged balsamic glaze & extra virgin olive oil.\n2. **Main Course (Primo/Secondo):** Creamy Tuscan Garlic Chicken or Homemade Penne alla Vodka served with warm garlic bread.\n3. **Dessert (Dolce):** Traditional Espresso Tiramisu or Lemon Panna Cotta.\n\n### 👨‍🍳 **Host & Prep Guidelines:**\n- **Make-Ahead Items:** Prepare desserts and marinate proteins 4-6 hours before guests arrive.\n- **Scaling Portions:** Multiply ingredients proportionately and increase cooking times slightly for larger serving batches.\n- **Wine Pairing:** Pair rich garlic/cream pasta with crisp Pinot Grigio or medium-bodied Chianti. 🥂`;
+  }
+
+  // 4. Leftover Ingredients & Pantry Cooking with Sauce/Pasta Ratios (High Priority)
+  if (
+    lower.includes("leftover") || lower.includes("pantry") || lower.includes("ratio") || 
+    (lower.includes("chicken") && lower.includes("cream") && lower.includes("pasta")) ||
+    (lower.includes("cheese") && lower.includes("pasta") && lower.includes("cream")) ||
+    (lower.includes("what can i cook with") && lower.includes("leftover"))
+  ) {
+    return `🍳 **Chef RecipeHub's Leftover & Pantry Gourmet Recipe Guide**:\n\n### 🍝 **Quick Dish: Creamy Garlic Chicken Alfredo Pasta**\n- **Base Ingredients:** 2 cups cooked leftover chicken (shredded), 250g pasta, 3/4 cup heavy cream or whole milk, 1/2 cup grated cheese (Parmesan/Cheddar), 2 cloves garlic, 1 tbsp butter/oil.\n\n### 📐 **Golden Sauce-to-Pasta & Protein Ratios:**\n1. **Sauce-to-Pasta Ratio:** Use **1 cup cream/sauce for every 200g - 250g dry pasta**. If the sauce gets too thick, add 2-3 tbsp of starchy pasta cooking water to smooth it out.\n2. **Protein Balance:** 1 to 1.5 cups of cooked protein (chicken/beef/tofu) per 250g pasta ensures every bite is balanced.\n\n### 👨‍🍳 **Step-by-Step 12-Minute Preparation:**\n1. **Boil Pasta:** Cook pasta in salted boiling water until al dente.\n2. **Build Cream Sauce:** Sauté minced garlic in butter for 1 minute. Pour in cream, bring to a gentle simmer, then melt in grated cheese until silky.\n3. **Combine & Warm:** Toss in shredded leftover chicken and drained pasta into the simmering sauce. Stir for 2 minutes until hot and well-coated.\n4. **Finish:** Season with freshly cracked black pepper, salt, and red pepper flakes or parsley! 🧀`;
   }
 
   // 4. Baking & Vegan Egg / Dairy Substitutes
@@ -105,17 +139,22 @@ const getSmartCulinaryFallback = (rawQuery) => {
     return `👨‍🍳 **Chef RecipeHub Guide for "${query}"**:\n\n1. **Preparation:** Always prep and measure ingredients (mise en place) before starting to ensure smooth cooking.\n2. **Flavor Enhancers:** Use fresh garlic, aromatic herbs, and a touch of quality oil or butter.\n3. **Pro Tip:** Season in layers throughout cooking rather than all at the end.\n\nLooking for full community recipes for **${dishName}**? Check out the **Recipes** tab on RecipeHub! 🥘`;
   }
 
-  // 7. General Fallback for Custom Queries
-  return `👨‍🍳 **Chef RecipeHub Culinary Assistant**:
+  // 7. Scope-Aware Professional Fallback for Unmatched / Out-of-Scope Queries
+  return `👨‍🍳 **Chef RecipeHub AI Assistant**:
 
-Thank you for your question regarding **"${query}"**!
+Thank you for reaching out! I am **Chef RecipeHub**, your personal AI culinary & recipe assistant.
 
-Here are key culinary insights for your query:
-- **Technique:** Maintain consistent heat/temperature control and measure key ratio ingredients accurately.
-- **Scaling:** When adjusting recipe servings up or down, adjust seasonings gradually and taste test as you go.
-- **Search Recipes:** You can also search for step-by-step community recipes directly using the search bar on our homepage!
+While I specialize exclusively in cooking, recipes, flavor pairings, pantry hacks, dietary substitutes, and **RecipeHub** platform features, I am always ready to guide your cooking journey! 🍳
 
-What else would you like to cook or learn today? 🍳`;
+**Here are a few things you can ask me about:**
+- 🥣 **Healthy Recipes & Power Bowls** (e.g. Crispy sweet potato bowls, quinoa bowls)
+- 🍝 **Pantry & Leftover Cooking** (e.g. Creamy pasta with leftover chicken)
+- 🍷 **Dinner Parties & Menu Planning** (e.g. 3-course Italian dinner menu)
+- 🥧 **Specialty Dish Hacks** (e.g. Shepherd's Pie with crispy potato crust)
+- 🍰 **Baking & Ingredient Substitutes** (e.g. Vegan egg replacements)
+- 🌟 **RecipeHub Platform Features** (e.g. Premium membership & recipe discovery)
+
+What delicious dish or culinary hack would you like to explore today? 🔪✨`;
 };
 
 /**
