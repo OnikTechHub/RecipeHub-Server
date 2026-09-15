@@ -9,6 +9,7 @@ const reportRoutes = require("./reportRoutes");
 const adminRoutes = require("./adminRoutes");
 const authRoutes = require("./authRoutes");
 const contactRoutes = require("./contactRoutes");
+const aiRoutes = require("./aiRoutes");
 
 // Mount all modular routes
 router.use(userRoutes);
@@ -19,5 +20,6 @@ router.use(reportRoutes);
 router.use(adminRoutes);
 router.use(authRoutes);
 router.use(contactRoutes);
+router.use(aiRoutes);
 
 module.exports = router;
