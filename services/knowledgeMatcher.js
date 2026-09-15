@@ -31,13 +31,15 @@ const matchLocalKnowledge = (userQuery) => {
     return { matched: false };
   }
 
-  const cleanQuery = userQuery.toLowerCase().trim();
+  // Strip trailing punctuation for exact matching
+  const cleanQuery = userQuery.toLowerCase().replace(/[?.,!:]/g, "").trim();
 
   // 1. Direct Phrase Match Check
   for (const intent of knowledgeData.intents) {
     if (Array.isArray(intent.phrases)) {
       for (const phrase of intent.phrases) {
-        if (cleanQuery.includes(phrase.toLowerCase())) {
+        const cleanPhrase = phrase.toLowerCase().replace(/[?.,!:]/g, "").trim();
+        if (cleanQuery.includes(cleanPhrase) || cleanQuery === cleanPhrase) {
           console.log(`[Hybrid Router] Matched Local Knowledge Phrase: "${phrase}" (Intent: ${intent.id})`);
           return {
             matched: true,

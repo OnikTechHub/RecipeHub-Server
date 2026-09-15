@@ -3,9 +3,31 @@
     {
       "id": "overview",
       "category": "Project Overview",
-      "keywords": ["what is recipehub", "about recipehub", "recipe hub", "how recipehub works", "platform overview", "what can I do here", "website info"],
-      "phrases": ["what is recipehub", "tell me about recipehub", "how does recipehub work", "what is this app"],
-      "response": "🍽️ **Welcome to RecipeHub!**\n\nRecipeHub is a modern, interactive culinary platform designed for food enthusiasts, home cooks, and professional chefs.\n\n### **Key Features:**\n- 📖 **Explore Thousands of Recipes:** Filter by category, cooking time, and dietary preferences.\n- 🤖 **Chef AI Culinary Assistant:** 24/7 cooking guidance, ingredient substitution, & recipe scaling.\n- 🌟 **Premium Creator Membership:** Access exclusive gourmet recipes, ad-free browsing, and premium chef badges.\n- 🍳 **Community Recipe Uploads:** Share your favorite recipes with photos, step-by-step instructions, and nutrition info.\n- 💖 **Favorites & Collections:** Save and organize your top recipes for quick cooking."
+      "keywords": [
+        "what is recipehub",
+        "about recipehub",
+        "recipe hub",
+        "recipehub",
+        "tell me about recipehub",
+        "what is this platform",
+        "what is this website",
+        "what is this app",
+        "how does recipehub work",
+        "project overview",
+        "about website"
+      ],
+      "phrases": [
+        "what is recipehub",
+        "tell me about recipehub",
+        "what is recipe hub",
+        "how does recipehub work",
+        "what is this platform",
+        "what is this website",
+        "what is this app",
+        "about recipehub",
+        "recipehub overview"
+      ],
+      "response": "🍽️ **RecipeHub - Full-Stack Culinary Platform**\n\n**RecipeHub** is a state-of-the-art, interactive online recipe sharing and culinary community platform designed for food lovers, home cooks, and professional chefs.\n\n### 🌟 **Core Features & Capabilities:**\n- 📖 **Comprehensive Recipe Library:** Browse, search, and filter thousands of recipes by category, ingredients, prep time, and dietary needs.\n- 🤖 **Chef AI Culinary Assistant:** 24/7 AI-powered cooking guidance, ingredient substitution advice, and dynamic recipe scaling.\n- 🌟 **Premium Creator Membership:** Unlock secret gourmet recipes, enjoy an ad-free experience, and earn exclusive creator badges.\n- 🍳 **Community Recipe Uploads:** Share your own recipes with photos, step-by-step instructions, and automatic nutrition breakdowns.\n- 💖 **Favorites & Personal Collections:** Save and organize your top recipes in your personal user dashboard."
     },
     {
       "id": "premium_membership",
