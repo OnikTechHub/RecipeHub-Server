@@ -27,7 +27,7 @@ Keep responses helpful, appetizing, concise, structured with bullet points or bo
       combinedPrompt = `Previous Conversation:\n${formattedHistory}\n\nUser Question: ${message}`;
     }
 
-    const reply = await generateAIContent(combinedPrompt, systemInstruction);
+    const reply = await generateAIContent(combinedPrompt, systemInstruction, message);
 
     res.send({
       success: true,

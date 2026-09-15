@@ -40,31 +40,66 @@ let currentKeyIndex = 0;
 /**
  * Smart Culinary Fallback Generator when Gemini API keys are invalid/quota exceeded
  */
-const getSmartCulinaryFallback = (prompt) => {
-  const text = (prompt || "").toLowerCase();
+const getSmartCulinaryFallback = (rawQuery) => {
+  const query = (rawQuery || "").trim();
+  const lower = query.toLowerCase();
 
-  if (text.includes("hi") || text.includes("hello") || text.includes("hey") || text.includes("greeting")) {
+  // 1. Greetings (only when user query itself starts with or matches greeting)
+  if (/^(hi|hello|hey|greetings|good morning|good evening|hola|salut|assalamu alaikum|slm)/i.test(lower)) {
     return "Hello there! 👋 I'm **Chef RecipeHub**, your personal AI culinary assistant.\n\nHow can I help you today? You can ask me about:\n- 🍳 Quick & easy recipe ideas\n- 🥦 Healthy ingredient substitutions\n- ⏱️ Cooking times & techniques\n- 🍰 Dessert and baking tips";
   }
 
-  if (text.includes("chicken") || text.includes("rice") || text.includes("ingredient") || text.includes("cook")) {
-    return "That sounds like a fantastic meal idea! 👨‍🍳 Here's a quick recipe concept:\n\n### 🍗 **Savory Garlic Herb Chicken & Rice**\n- **Ingredients:** Chicken breast/thighs, rice, garlic, olive oil, butter, chicken broth, & herbs (thyme/parsley).\n- **Prep:** Sauté seasoned chicken in butter and oil until golden brown. Set aside.\n- **Cook:** Sauté minced garlic, add rice & broth, simmer covered for 15-18 mins. Top with sliced chicken!\n\n*Tip: Check out our RecipeHub feed for full step-by-step community recipes!* 🥘";
+  // 2. RecipeHub Premium Access / Pricing Questions
+  if (
+    lower.includes("premium") || lower.includes("membership") || lower.includes("subscription") || 
+    lower.includes("price") || lower.includes("cost") || lower.includes("upgrade") || lower.includes("stripe")
+  ) {
+    return "🌟 **RecipeHub Premium Membership** unlocks exclusive culinary features:\n\n- 🔓 **Unlimited Recipe Access:** View all secret chef recipes.\n- 🤖 **Chef AI Assistant:** Unlimited 24/7 cooking guidance.\n- ⚡ **Ad-Free Browsing:** Seamless cooking experience.\n- 💎 **Exclusive Badges:** Showcase your chef status on community recipes.\n\nVisit our **Pricing** page to upgrade today!";
   }
 
-  return "Welcome to **Chef RecipeHub**! 👨‍🍳 I'm here to assist you with cooking tips, flavor pairings, dietary substitutes, and recipe ideas. What dish are you planning to prepare today?";
+  // 3. Specific Ingredient / Food / Recipe / Cooking Questions
+  if (
+    lower.includes("chicken") || lower.includes("egg") || lower.includes("rice") || lower.includes("fish") || 
+    lower.includes("beef") || lower.includes("pasta") || lower.includes("salad") || lower.includes("soup") || 
+    lower.includes("dessert") || lower.includes("cake") || lower.includes("cook") || lower.includes("make") || 
+    lower.includes("recipe") || lower.includes("bake") || lower.includes("ingredient") || lower.includes("scale")
+  ) {
+    let dishName = "your requested dish";
+    if (lower.includes("egg")) dishName = "Egg & Tomato Dish";
+    else if (lower.includes("chicken")) dishName = "Savory Garlic Chicken & Rice";
+    else if (lower.includes("pasta")) dishName = "Creamy Garlic Pasta";
+    else if (lower.includes("rice")) dishName = "Aromatic Fried Rice";
+    else if (lower.includes("salad")) dishName = "Fresh Garden Salad";
+
+    return `👨‍🍳 **Chef RecipeHub Guide for "${query}"**:\n\n1. **Preparation:** Always prep and measure ingredients (mise en place) before starting to ensure smooth cooking.\n2. **Flavor Enhancers:** Use fresh garlic, herbs, and a touch of butter or olive oil for high aroma.\n3. **Pro Tip:** Season in layers throughout cooking rather than all at the end.\n\nLooking for full community recipes for **${dishName}**? Check out the **Recipes** tab on RecipeHub! 🥘`;
+  }
+
+  // 4. Any other custom user query
+  return `👨‍🍳 **Chef RecipeHub Assistant**:
+
+Thank you for your question regarding **"${query}"**!
+
+Here are key culinary insights for your query:
+- **Technique:** Maintain consistent heat control and avoid overcrowding your cooking pan.
+- **Scaling:** When adjusting recipe servings up or down, adjust spices gradually and taste test.
+- **Community Recipes:** You can also search for step-by-step community recipes directly using the top search bar!
+
+What else would you like to cook or learn today? 🍳`;
 };
 
 /**
  * Generate AI content with automatic fallback across 10 Gemini API keys
- * @param {string} prompt - User message or cooking question
- * @param {string} systemInstruction - Optional system instruction for Chef AI persona
+ * @param {string} prompt - Formatted combined prompt including conversation history
+ * @param {string} systemInstruction - System instruction for Chef AI persona
+ * @param {string} userQuery - The exact live query string from the user
  */
-const generateAIContent = async (prompt, systemInstruction = "") => {
+const generateAIContent = async (prompt, systemInstruction = "", userQuery = "") => {
+  const queryToUse = userQuery || prompt;
   const apiKeys = getGeminiApiKeys();
 
   if (apiKeys.length === 0) {
     console.error("Gemini API Error Details: No valid Gemini API keys configured in .env. Using Smart Culinary Fallback.");
-    return getSmartCulinaryFallback(prompt);
+    return getSmartCulinaryFallback(queryToUse);
   }
 
   let lastError = null;
@@ -138,7 +173,7 @@ const generateAIContent = async (prompt, systemInstruction = "") => {
   }
 
   console.error("Gemini API Error Details: All configured Gemini API keys failed or returned invalid key errors. Using Chef RecipeHub Smart Fallback.");
-  return getSmartCulinaryFallback(prompt);
+  return getSmartCulinaryFallback(queryToUse);
 };
 
 module.exports = {
