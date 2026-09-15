@@ -409,16 +409,44 @@ const toggleFeatureRecipe = async (req, res, next) => {
  * Get reports formatted for admin with recipe details
  * Route: GET /admin/reports
  */
+/**
+ * Get reports formatted for admin aggregated/grouped by recipeId
+ * Route: GET /admin/reports
+ */
 const getAdminReports = async (req, res, next) => {
   try {
     const { page, limit } = req.query;
-    const totalReports = await Report.countDocuments();
+
+    // Get count of unique reported recipes
+    const distinctRecipeIds = await Report.distinct("recipeId");
+    const totalReports = distinctRecipeIds.length;
+    const totalReportEntries = await Report.countDocuments();
 
     let pageNum = parseInt(page);
     let limitNum = parseInt(limit);
     const usePagination = !isNaN(pageNum) && !isNaN(limitNum) && limitNum > 0;
 
     const pipeline = [
+      // 1. Group all report entries by recipeId
+      {
+        $group: {
+          _id: "$recipeId",
+          recipeId: { $first: "$recipeId" },
+          recipeName: { $first: "$recipeName" },
+          latestReportedAt: { $max: "$reportedAt" },
+          reportCount: { $sum: 1 },
+          allRecipeReports: {
+            $push: {
+              _id: "$_id",
+              reporterEmail: "$reporterEmail",
+              reason: "$reason",
+              details: "$details",
+              reportedAt: "$reportedAt",
+            },
+          },
+        },
+      },
+      // 2. Convert recipeId to ObjectId if 24-char hex string
       {
         $addFields: {
           convertedRecipeId: {
@@ -435,6 +463,7 @@ const getAdminReports = async (req, res, next) => {
           },
         },
       },
+      // 3. Lookup target recipe details
       {
         $lookup: {
           from: "recipes",
@@ -443,23 +472,25 @@ const getAdminReports = async (req, res, next) => {
           as: "targetRecipe",
         },
       },
-      {
-        $lookup: {
-          from: "reports",
-          localField: "recipeId",
-          foreignField: "recipeId",
-          as: "allRecipeReports",
-        },
-      },
+      // 4. Format output document
       {
         $addFields: {
           recipeInfo: { $arrayElemAt: ["$targetRecipe", 0] },
-          recipeReportCount: { $size: "$allRecipeReports" },
-          recipeAllReports: "$allRecipeReports",
+          recipeReportCount: "$reportCount",
+          reporterEmail: {
+            $arrayElemAt: ["$allRecipeReports.reporterEmail", 0],
+          },
+          reason: {
+            $arrayElemAt: ["$allRecipeReports.reason", 0],
+          },
+          details: {
+            $arrayElemAt: ["$allRecipeReports.details", 0],
+          },
+          reportedAt: "$latestReportedAt",
         },
       },
-      { $project: { targetRecipe: 0, convertedRecipeId: 0, allRecipeReports: 0 } },
-      { $sort: { reportedAt: -1 } },
+      { $project: { targetRecipe: 0, convertedRecipeId: 0 } },
+      { $sort: { latestReportedAt: -1, _id: -1 } },
     ];
 
     if (usePagination) {
@@ -473,6 +504,7 @@ const getAdminReports = async (req, res, next) => {
       success: true,
       data: result,
       totalReports,
+      totalReportEntries,
       totalPages: usePagination ? Math.ceil(totalReports / limitNum) || 1 : 1,
       currentPage: usePagination ? pageNum : 1,
     });
@@ -482,16 +514,24 @@ const getAdminReports = async (req, res, next) => {
 };
 
 /**
- * Dismiss/delete report
- * Route: DELETE /admin/reports/:id
+ * Dismiss/delete report flag(s)
+ * Route: DELETE /admin/reports/:id (id can be report _id or recipeId)
  */
 const dismissReport = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await Report.deleteOne({ _id: id });
+    const { recipeId } = req.query;
+
+    const targetRecipeId = recipeId || id;
+
+    // Delete all report entries for the recipe OR by single _id
+    const result = await Report.deleteMany({
+      $or: [{ _id: id }, { recipeId: targetRecipeId }],
+    });
+
     res.send({
       success: true,
-      message: "Report dismissed successfully by Admin.",
+      message: "Report flag(s) dismissed successfully by Admin.",
       data: result,
     });
   } catch (error) {
