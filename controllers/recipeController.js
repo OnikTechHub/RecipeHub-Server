@@ -20,7 +20,15 @@ const getAllRecipes = async (req, res, next) => {
       query.recipeName = { $regex: search.trim(), $options: "i" };
     }
     if (category && category !== "All") {
-      query.category = { $in: [category] };
+      const catTrim = category.trim();
+      const baseCat = catTrim.replace(/s$/i, "");
+      const catRegex = new RegExp("^" + baseCat + "s?$", "i");
+
+      query.$or = [
+        { category: { $in: [catTrim, baseCat, `${baseCat}s`, catRegex] } },
+        { category: catRegex },
+        { cuisine: catRegex },
+      ];
     }
 
     const cleanFilter = (filter || "all").toLowerCase().trim();
@@ -157,9 +165,17 @@ const createRecipe = async (req, res, next) => {
     if (newRecipe.isPaid) {
       newRecipe.isPaid = true;
       newRecipe.price = Math.max(0, Number(newRecipe.price) || 0);
+      newRecipe.recipeType = "Paid";
     } else {
       newRecipe.isPaid = false;
       newRecipe.price = 0;
+      newRecipe.recipeType = "Free";
+    }
+
+    if (!newRecipe.recipeImage && newRecipe.image) {
+      newRecipe.recipeImage = newRecipe.image;
+    } else if (!newRecipe.image && newRecipe.recipeImage) {
+      newRecipe.image = newRecipe.recipeImage;
     }
 
     const user = await User.findByEmailWithFallback(newRecipe.authorEmail);
@@ -173,6 +189,51 @@ const createRecipe = async (req, res, next) => {
         message:
           "Standard accounts have a 2-recipe limit! Upgrade to Premium to unlock unlimited creations.",
       });
+    }
+
+    // Duplicate Recipe Name Prevention Check (Case-Insensitive)
+    const targetTitle = (newRecipe.recipeName || newRecipe.title || "").trim();
+    if (targetTitle) {
+      const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const titleRegex = new RegExp(`^${escapeRegex(targetTitle)}$`, "i");
+
+      const duplicateRecipe = await Recipe.findOne({
+        $or: [{ recipeName: titleRegex }, { title: titleRegex }],
+      });
+
+      if (duplicateRecipe) {
+        return res.status(400).send({
+          success: false,
+          message: `A recipe named "${targetTitle}" already exists! Please choose a unique title.`,
+        });
+      }
+    }
+
+    // Direct Database Query for AI Recipe Weekly Quota Check (Max 2 saved in last 7 days)
+    if (newRecipe.isAiGenerated && newRecipe.authorEmail) {
+      const cleanEmail = newRecipe.authorEmail.trim().toLowerCase();
+      const adminEmail = (process.env.ADMIN_EMAIL || "admin@recipehub.com").trim().toLowerCase();
+      const isAdminUser = cleanEmail === adminEmail || user?.role === "admin";
+
+      if (!isAdminUser) {
+        const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const emailRegex = new RegExp(`^${escapeRegex(cleanEmail)}$`, "i");
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+        const aiSavedCount = await Recipe.countDocuments({
+          $or: [{ authorEmail: emailRegex }, { userEmail: emailRegex }],
+          isAiGenerated: true,
+          createdAt: { $gte: sevenDaysAgo },
+        });
+
+        if (aiSavedCount >= 2) {
+          return res.status(403).send({
+            success: false,
+            limitReached: true,
+            message: "Weekly AI generation limit (2 recipes) reached!",
+          });
+        }
+      }
     }
 
     const result = await Recipe.create(newRecipe);

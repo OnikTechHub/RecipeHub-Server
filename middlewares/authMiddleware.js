@@ -68,7 +68,70 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
+const User = require("../models/User");
+
+/**
+ * Premium Membership middleware.
+ * Verifies JWT token or email parameter and ensures user has Premium / Admin access.
+ */
+const requirePremium = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    let token = null;
+
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
+    } else if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    }
+
+    let userEmail = req.body?.userEmail || req.body?.email || req.query?.email || null;
+
+    if (token) {
+      try {
+        const decoded = await verifyJwtToken(token);
+        req.user = decoded;
+        if (!userEmail) userEmail = decoded.email;
+      } catch (err) {
+        console.warn("Token verification warning in requirePremium:", err.message);
+      }
+    }
+
+    if (!userEmail && !req.user) {
+      return res.status(401).json({
+        success: false,
+        isPremiumRequired: true,
+        message: "Access denied. Authentication token or user email is missing.",
+      });
+    }
+
+    const emailToSearch = (userEmail || req.user?.email || "").trim().toLowerCase();
+    const adminEmail = (process.env.ADMIN_EMAIL || "admin@recipehub.com").trim().toLowerCase();
+
+    if (emailToSearch === adminEmail || req.user?.role === "admin") {
+      return next();
+    }
+
+    const userDoc = await User.findByEmailWithFallback(emailToSearch);
+    const isPremiumUser =
+      userDoc && (userDoc.isPremium === true || userDoc.role === "premium" || userDoc.role === "admin");
+
+    if (!isPremiumUser && (!req.user || (!req.user.isPremium && req.user.role !== "premium" && req.user.role !== "admin"))) {
+      return res.status(403).json({
+        success: false,
+        isPremiumRequired: true,
+        message: "Exclusive Premium Feature. Please upgrade to RecipeHub Premium to access the AI Smart Recipe Generator!",
+      });
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   optionalAuth,
   requireAuth,
+  requirePremium,
 };

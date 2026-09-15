@@ -246,7 +246,191 @@ const generateAIContent = async (prompt, systemInstruction = "", userQuery = "")
   return getSmartCulinaryFallback(queryToUse);
 };
 
+const FREE_FOOD_IMAGES = {
+  Breakfast: [
+    "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=1000&q=80"
+  ],
+  Lunch: [
+    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1000&q=80"
+  ],
+  Dinner: [
+    "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1621996346565-e3d5d6288596?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1000&q=80"
+  ],
+  Snack: [
+    "https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=1000&q=80"
+  ],
+  Dessert: [
+    "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=1000&q=80"
+  ],
+  Default: [
+    "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1000&q=80"
+  ]
+};
+
+const getSmartFoodImage = (mealType = "Dinner", title = "") => {
+  const lowerTitle = (title || "").toLowerCase();
+  
+  if (lowerTitle.includes("pasta") || lowerTitle.includes("noodle") || lowerTitle.includes("spaghetti") || lowerTitle.includes("alfredo")) {
+    return "https://images.unsplash.com/photo-1621996346565-e3d5d6288596?auto=format&fit=crop&w=1000&q=80";
+  }
+  if (lowerTitle.includes("salad") || lowerTitle.includes("kale") || lowerTitle.includes("spinach")) {
+    return "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1000&q=80";
+  }
+  if (lowerTitle.includes("chicken") || lowerTitle.includes("steak") || lowerTitle.includes("beef") || lowerTitle.includes("meat")) {
+    return "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1000&q=80";
+  }
+  if (lowerTitle.includes("salmon") || lowerTitle.includes("fish") || lowerTitle.includes("tuna")) {
+    return "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1000&q=80";
+  }
+  if (lowerTitle.includes("cake") || lowerTitle.includes("chocolate") || lowerTitle.includes("sweet") || lowerTitle.includes("pancake")) {
+    return "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=1000&q=80";
+  }
+  if (lowerTitle.includes("potato") || lowerTitle.includes("bowl")) {
+    return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1000&q=80";
+  }
+
+  const pool = FREE_FOOD_IMAGES[mealType] || FREE_FOOD_IMAGES.Default;
+  const index = Math.abs(lowerTitle.length % pool.length);
+  return pool[index];
+};
+
+/**
+ * AI Smart Recipe Generator for Premium Users
+ * Creates a structured custom recipe object from user inputs.
+ */
+const generateAIRecipe = async ({ ingredients, dietaryPreference = "None", mealType = "Dinner", servings = 2 }) => {
+  const ingList = Array.isArray(ingredients) ? ingredients.join(", ") : (ingredients || "mixed ingredients");
+  
+  const systemPrompt = `You are Chef RecipeHub, an elite master chef. Create a gourmet, highly detailed, step-by-step recipe based on the provided inputs.
+Respond ONLY with a valid JSON object matching this schema:
+{
+  "title": "Recipe Title",
+  "description": "Short appetizing description",
+  "prepTime": "15 mins",
+  "cookTime": "20 mins",
+  "servings": ${servings},
+  "difficulty": "Easy",
+  "dietaryTags": ["Tag1", "Tag2"],
+  "ingredients": ["1 cup ingredient 1", "2 tbsp ingredient 2"],
+  "instructions": [
+    "Step 1: Description...",
+    "Step 2: Description..."
+  ],
+  "chefTips": "Pro chef secret tip for perfection",
+  "nutritionInfo": {
+    "calories": "450 kcal",
+    "protein": "32g",
+    "carbs": "25g",
+    "fats": "18g"
+  }
+}`;
+
+  const userPrompt = `Generate a ${dietaryPreference !== "None" ? dietaryPreference + " " : ""}${mealType} recipe using these key ingredients: ${ingList}. Ensure servings count is ${servings}.`;
+
+  const apiKeys = getGeminiApiKeys();
+
+  if (apiKeys.length > 0) {
+    const totalKeys = apiKeys.length;
+    const models = ["gemini-1.5-flash", "gemini-2.0-flash"];
+
+    for (let attempt = 0; attempt < totalKeys; attempt++) {
+      const keyIndex = (currentKeyIndex + attempt) % totalKeys;
+      const apiKey = apiKeys[keyIndex];
+
+      for (const modelName of models) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+          const payload = {
+            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: {
+              temperature: 0.7,
+              responseMimeType: "application/json",
+              maxOutputTokens: 1200,
+            },
+          };
+
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json();
+          const textReply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+          if (textReply) {
+            try {
+              const cleanJsonStr = textReply.replace(/```json/g, "").replace(/```/g, "").trim();
+              const recipeObj = JSON.parse(cleanJsonStr);
+              currentKeyIndex = (keyIndex + 1) % totalKeys;
+
+              const matchedImg = getSmartFoodImage(mealType, recipeObj.title);
+              recipeObj.image = recipeObj.image || matchedImg;
+              recipeObj.recipeImage = recipeObj.recipeImage || matchedImg;
+
+              return recipeObj;
+            } catch (jsonErr) {
+              console.warn("JSON parse error from Gemini response, using fallback format");
+            }
+          }
+        } catch (err) {
+          console.error(`Gemini Recipe Gen Error (Key ${keyIndex + 1}):`, err.message);
+        }
+      }
+    }
+  }
+
+  // Smart Gourmet Recipe Generator Fallback
+  const mainIng = ingList.split(",")[0]?.trim() || "Seasonal Ingredient";
+  const capitalMain = mainIng.charAt(0).toUpperCase() + mainIng.slice(1);
+  const dietLabel = dietaryPreference !== "None" && dietaryPreference ? dietaryPreference : "Gourmet";
+  const fallbackTitle = `Chef's ${dietLabel} ${capitalMain} Special`;
+  const matchedImg = getSmartFoodImage(mealType, fallbackTitle);
+
+  return {
+    title: fallbackTitle,
+    description: `A delicious, chef-crafted ${mealType.toLowerCase()} dish featuring ${ingList} with harmonized spices and a rich, savory finish.`,
+    prepTime: "12 mins",
+    cookTime: "18 mins",
+    servings: Number(servings) || 2,
+    difficulty: "Easy",
+    image: matchedImg,
+    recipeImage: matchedImg,
+    dietaryTags: [dietLabel, mealType, "Chef Signature"],
+    ingredients: ingList.split(",").map((item) => `1 portion of ${item.trim()}`).concat([
+      "2 tbsp extra virgin olive oil or butter",
+      "2 cloves garlic, minced",
+      "Pinch of sea salt & cracked black pepper",
+      "Fresh herbs for garnish"
+    ]),
+    instructions: [
+      `Prep & Mise en Place: Thoroughly wash and chop ${ingList} into uniform bite-sized pieces.`,
+      `Aromatics: Heat olive oil or butter in a skillet over medium heat. Sauté minced garlic for 1 minute until fragrant.`,
+      `Searing & Seasoning: Add ${ingList} to the pan. Season generously with sea salt and cracked black pepper. Sauté for 10-12 minutes until tender and golden brown.`,
+      `Plating & Serving: Transfer to warm plates. Garnish with fresh herbs and enjoy hot!`
+    ],
+    chefTips: "For maximum flavor depth, deglaze the pan with a splash of fresh lemon juice or white wine before serving!",
+    nutritionInfo: {
+      calories: "420 kcal",
+      protein: "28g",
+      carbs: "18g",
+      fats: "16g"
+    }
+  };
+};
+
 module.exports = {
   getGeminiApiKeys,
   generateAIContent,
+  generateAIRecipe,
 };
