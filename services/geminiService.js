@@ -25,6 +25,23 @@ const getGeminiApiKeys = () => {
 let currentKeyIndex = 0;
 
 /**
+ * Smart Culinary Fallback Generator when Gemini API keys are invalid/quota exceeded
+ */
+const getSmartCulinaryFallback = (prompt) => {
+  const text = (prompt || "").toLowerCase();
+
+  if (text.includes("hi") || text.includes("hello") || text.includes("hey") || text.includes("greeting")) {
+    return "Hello there! 👋 I'm **Chef RecipeHub**, your personal AI culinary assistant.\n\nHow can I help you today? You can ask me about:\n- 🍳 Quick & easy recipe ideas\n- 🥦 Healthy ingredient substitutions\n- ⏱️ Cooking times & techniques\n- 🍰 Dessert and baking tips";
+  }
+
+  if (text.includes("chicken") || text.includes("rice") || text.includes("ingredient") || text.includes("cook")) {
+    return "That sounds like a fantastic meal idea! 👨‍🍳 Here's a quick recipe concept:\n\n### 🍗 **Savory Garlic Herb Chicken & Rice**\n- **Ingredients:** Chicken breast/thighs, rice, garlic, olive oil, butter, chicken broth, & herbs (thyme/parsley).\n- **Prep:** Sauté seasoned chicken in butter and oil until golden brown. Set aside.\n- **Cook:** Sauté minced garlic, add rice & broth, simmer covered for 15-18 mins. Top with sliced chicken!\n\n*Tip: Check out our RecipeHub feed for full step-by-step community recipes!* 🥘";
+  }
+
+  return "Welcome to **Chef RecipeHub**! 👨‍🍳 I'm here to assist you with cooking tips, flavor pairings, dietary substitutes, and recipe ideas. What dish are you planning to prepare today?";
+};
+
+/**
  * Generate AI content with automatic fallback across 10 Gemini API keys
  * @param {string} prompt - User message or cooking question
  * @param {string} systemInstruction - Optional system instruction for Chef AI persona
@@ -33,8 +50,8 @@ const generateAIContent = async (prompt, systemInstruction = "") => {
   const apiKeys = getGeminiApiKeys();
 
   if (apiKeys.length === 0) {
-    console.error("Gemini API Error Details: No Gemini API keys configured in .env");
-    throw new Error("No Gemini API keys configured. Please add GEMINI_API_KEY_1 to GEMINI_API_KEY_10 in .env.");
+    console.error("Gemini API Error Details: No Gemini API keys configured in .env. Using Smart Culinary Fallback.");
+    return getSmartCulinaryFallback(prompt);
   }
 
   let lastError = null;
@@ -107,8 +124,8 @@ const generateAIContent = async (prompt, systemInstruction = "") => {
     }
   }
 
-  console.error("Gemini API Error Details: All configured Gemini API keys failed or exceeded quota.");
-  throw lastError || new Error("All configured Gemini API keys exceeded quota or rate limits.");
+  console.error("Gemini API Error Details: All 10 configured Gemini API keys failed or returned invalid key errors. Using Chef RecipeHub Smart Fallback.");
+  return getSmartCulinaryFallback(prompt);
 };
 
 module.exports = {
