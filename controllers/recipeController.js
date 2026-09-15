@@ -258,8 +258,18 @@ const checkRecipeAccess = async (req, res, next) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Author of the recipe
-    if (recipe.authorEmail && recipe.authorEmail.toLowerCase() === normalizedEmail) {
+    // Author / Creator of the recipe (Free access to own recipes)
+    const authorEmails = [
+      recipe.authorEmail,
+      recipe.userEmail,
+      recipe.creatorEmail,
+      recipe.email,
+      recipe.createdBy,
+    ]
+      .filter(Boolean)
+      .map((e) => e.toString().toLowerCase().trim());
+
+    if (authorEmails.includes(normalizedEmail)) {
       return res.send({
         success: true,
         hasAccess: true,
@@ -281,10 +291,10 @@ const checkRecipeAccess = async (req, res, next) => {
       });
     }
 
-    // Check if user purchased THIS SPECIFIC recipe
+    // Check if user purchased THIS SPECIFIC recipe (case-insensitive email & flexible recipeId match)
     const purchased = await Payment.findOne({
-      userEmail: normalizedEmail,
-      recipeId: id.toString(),
+      userEmail: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") },
+      recipeId: { $in: [id.toString(), id] },
       paymentStatus: "paid",
     });
 
