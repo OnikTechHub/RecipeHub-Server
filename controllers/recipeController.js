@@ -279,12 +279,13 @@ const checkRecipeAccess = async (req, res, next) => {
       });
     }
 
-    // Admin user access
+    // Admin user access (Universal free access for all admins: root or sub-admin)
     const userDoc = await User.findByEmailWithFallback(normalizedEmail);
     if (
       normalizedEmail === ADMIN_EMAIL.toLowerCase() ||
       normalizedEmail === "admin@recipehub.com" ||
-      (userDoc && userDoc.role === "admin")
+      (userDoc && userDoc.role === "admin") ||
+      req.user?.role === "admin"
     ) {
       return res.send({
         success: true,

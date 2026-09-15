@@ -37,6 +37,23 @@ const createCheckoutSession = async (req, res, next) => {
     const clientOrigin = process.env.CLIENT_URL || "http://localhost:3000";
     const targetEmail = (userEmail || email || req.user?.email || "").trim().toLowerCase();
 
+    // Block purchase for Admin users (Admins have lifetime free access to all recipes)
+    if (targetEmail) {
+      const userDoc = await User.findByEmailWithFallback(targetEmail);
+      const adminEmailEnv = (process.env.ADMIN_EMAIL || "admin@recipehub.com").toLowerCase();
+      if (
+        targetEmail === adminEmailEnv ||
+        targetEmail === "admin@recipehub.com" ||
+        (userDoc && userDoc.role === "admin") ||
+        req.user?.role === "admin"
+      ) {
+        return res.status(400).send({
+          success: false,
+          message: "As an Administrator, you have full free lifetime access to all recipes. Purchases are disabled for admins.",
+        });
+      }
+    }
+
     // Multi-item Cart Checkout
     if (Array.isArray(items) && items.length > 0) {
       const lineItems = items.map((item) => ({
