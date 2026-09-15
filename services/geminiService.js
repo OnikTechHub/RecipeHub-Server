@@ -33,75 +33,81 @@ const generateAIContent = async (prompt, systemInstruction = "") => {
   const apiKeys = getGeminiApiKeys();
 
   if (apiKeys.length === 0) {
+    console.error("Gemini API Error Details: No Gemini API keys configured in .env");
     throw new Error("No Gemini API keys configured. Please add GEMINI_API_KEY_1 to GEMINI_API_KEY_10 in .env.");
   }
 
   let lastError = null;
   const totalKeys = apiKeys.length;
+  // Models to try (gemini-1.5-flash is primary stable chat model)
+  const models = ["gemini-1.5-flash", "gemini-2.0-flash"];
 
   for (let attempt = 0; attempt < totalKeys; attempt++) {
     const keyIndex = (currentKeyIndex + attempt) % totalKeys;
     const apiKey = apiKeys[keyIndex];
 
-    try {
-      const modelName = "gemini-2.0-flash";
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    for (const modelName of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-      const contentsPayload = [];
-      if (systemInstruction) {
-        contentsPayload.push({
-          role: "user",
-          parts: [{ text: `System Instruction: ${systemInstruction}` }],
-        });
-        contentsPayload.push({
-          role: "model",
-          parts: [{ text: "Understood! I am Chef RecipeHub, your AI culinary assistant." }],
-        });
-      }
-
-      contentsPayload.push({
-        role: "user",
-        parts: [{ text: prompt }],
-      });
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: contentsPayload,
+        const payload = {
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }],
+            },
+          ],
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 1000,
           },
-        }),
-      });
+        };
 
-      const data = await response.json();
+        if (systemInstruction && systemInstruction.trim()) {
+          payload.systemInstruction = {
+            parts: [{ text: systemInstruction.trim() }],
+          };
+        }
 
-      if (!response.ok || data.error) {
-        const errorMsg = data.error?.message || response.statusText;
-        const statusCode = response.status || data.error?.code;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-        console.warn(`[Gemini Rotation] Key ${keyIndex + 1}/${totalKeys} rate limit/quota error (${statusCode}): ${errorMsg}`);
-        lastError = new Error(`Key ${keyIndex + 1} Error: ${errorMsg}`);
-        // Fallback to next key in rotation
-        continue;
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+          const errorDetails = data.error || data || response.statusText;
+          console.error(`Gemini API Error Details (Key ${keyIndex + 1}/${totalKeys}, Model: ${modelName}):`, JSON.stringify(errorDetails, null, 2));
+
+          const errorMsg = data.error?.message || response.statusText;
+          lastError = new Error(`Key ${keyIndex + 1} (${modelName}) Error: ${errorMsg}`);
+
+          // If model not found, try fallback model; otherwise switch API key
+          if (data.error?.code === 404 || (errorMsg && errorMsg.toLowerCase().includes("not found"))) {
+            continue;
+          }
+          break;
+        }
+
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (reply) {
+          // Success! Advance rotation index for future load balance
+          currentKeyIndex = (keyIndex + 1) % totalKeys;
+          return reply;
+        } else {
+          console.error(`Gemini API Error Details (Key ${keyIndex + 1}): Candidate response empty or blocked.`, data);
+          lastError = new Error("Empty candidate received from Gemini model response.");
+        }
+      } catch (err) {
+        console.error("Gemini API Error Details:", err?.response?.data || err?.message || err);
+        lastError = err;
       }
-
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (reply) {
-        // Success! Advance rotation index for future load balance
-        currentKeyIndex = (keyIndex + 1) % totalKeys;
-        return reply;
-      } else {
-        lastError = new Error("Empty candidate received from Gemini model response.");
-      }
-    } catch (err) {
-      console.warn(`[Gemini Rotation] Key ${keyIndex + 1}/${totalKeys} network error: ${err.message}`);
-      lastError = err;
     }
   }
 
+  console.error("Gemini API Error Details: All configured Gemini API keys failed or exceeded quota.");
   throw lastError || new Error("All configured Gemini API keys exceeded quota or rate limits.");
 };
 

@@ -34,7 +34,7 @@ Keep responses helpful, appetizing, concise, structured with bullet points or bo
       reply: reply,
     });
   } catch (error) {
-    console.error("AI Chatbot Controller Error:", error.message);
+    console.error("Gemini API Error Details:", error?.response?.data || error?.message || error);
     res.status(500).send({
       success: false,
       message: error.message || "Failed to process AI chat response.",
