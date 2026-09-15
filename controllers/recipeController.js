@@ -162,8 +162,10 @@ const toggleLike = async (req, res, next) => {
  */
 const getFeaturedRecipes = async (req, res, next) => {
   try {
+    const limitNum = parseInt(req.query.limit) || 8;
     const result = await Recipe.find({ isFeatured: true })
       .sort({ featuredAt: -1, createdAt: -1 })
+      .limit(limitNum)
       .lean();
 
     res.send({
