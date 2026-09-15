@@ -27,6 +27,7 @@ loadKnowledgeBase();
  * @returns {object} { matched: boolean, intent?: string, reply?: string, source?: string }
  */
 const matchLocalKnowledge = (userQuery) => {
+  loadKnowledgeBase();
   if (!knowledgeData || !Array.isArray(knowledgeData.intents) || !userQuery) {
     return { matched: false };
   }
@@ -34,8 +35,8 @@ const matchLocalKnowledge = (userQuery) => {
   // Strip trailing punctuation for exact matching
   const cleanQuery = userQuery.toLowerCase().replace(/[?.,!:]/g, "").trim();
 
-  // Guard: If user query is a specific culinary/baking/recipe request, bypass platform FAQs unless platform terms are present
-  const culinaryKeywords = ["cake", "chocolate", "bake", "cookie", "salmon", "chicken", "beef", "pasta", "salad", "soup", "substitute", "substitutes", "replacement", "texture", "fry", "roast", "grill"];
+  // Guard: If user query is a specific culinary dish request, bypass platform FAQs unless platform terms are present
+  const culinaryKeywords = ["cake", "chocolate", "bake", "cookie", "salmon", "chicken", "beef", "pasta", "salad", "soup", "fry", "roast", "grill"];
   const platformScopeKeywords = ["recipehub", "recipe hub", "platform", "website", "app", "membership", "stripe", "account", "login", "signup", "dashboard", "upload", "creator"];
 
   const hasCulinaryContext = culinaryKeywords.some((ck) => cleanQuery.includes(ck));
@@ -46,21 +47,32 @@ const matchLocalKnowledge = (userQuery) => {
     return { matched: false };
   }
 
-  // 1. Direct Phrase Match Check
+  // 1. Direct Phrase Match Check (Sorted by phrase length descending for maximum precision)
+  const allPhrases = [];
   for (const intent of knowledgeData.intents) {
     if (Array.isArray(intent.phrases)) {
       for (const phrase of intent.phrases) {
-        const cleanPhrase = phrase.toLowerCase().replace(/[?.,!:]/g, "").trim();
-        if (cleanQuery.includes(cleanPhrase) || cleanQuery === cleanPhrase) {
-          console.log(`[Hybrid Router] Matched Local Knowledge Phrase: "${phrase}" (Intent: ${intent.id})`);
-          return {
-            matched: true,
-            intent: intent.id,
-            source: "local_knowledge_base",
-            reply: intent.response,
-          };
-        }
+        allPhrases.push({
+          cleanPhrase: phrase.toLowerCase().replace(/[?.,!:]/g, "").trim(),
+          rawPhrase: phrase,
+          intent: intent,
+        });
       }
+    }
+  }
+
+  // Sort phrases longest first
+  allPhrases.sort((a, b) => b.cleanPhrase.length - a.cleanPhrase.length);
+
+  for (const item of allPhrases) {
+    if (cleanQuery.includes(item.cleanPhrase) || cleanQuery === item.cleanPhrase) {
+      console.log(`[Hybrid Router] Matched Local Knowledge Phrase: "${item.rawPhrase}" (Intent: ${item.intent.id})`);
+      return {
+        matched: true,
+        intent: item.intent.id,
+        source: "local_knowledge_base",
+        reply: item.intent.response,
+      };
     }
   }
 

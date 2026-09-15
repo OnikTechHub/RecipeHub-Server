@@ -2,203 +2,264 @@
   "intents": [
     {
       "id": "overview",
-      "category": "Project Overview & Mission",
+      "category": "Platform Overview",
       "keywords": [
         "what is recipehub",
-        "about recipehub",
-        "recipe hub",
-        "recipehub",
-        "tell me about recipehub",
-        "what is this platform",
-        "what is this website",
-        "what is this app",
         "how does recipehub work",
-        "project overview",
-        "about website",
-        "what can I do on recipehub"
-      ],
-      "phrases": [
-        "what is recipehub",
-        "tell me about recipehub",
-        "what is recipe hub",
-        "how does recipehub work",
-        "what is this platform",
-        "what is this website",
-        "what is this app",
         "about recipehub",
         "recipehub overview",
-        "what can I do here"
-      ],
-      "response": "🍽️ **RecipeHub - Modern Full-Stack Culinary Platform**\n\n**RecipeHub** is a premier, interactive online recipe-sharing and culinary community platform designed for food lovers, home cooks, and professional chefs.\n\n### 🌟 **Key Highlights & Features:**\n- 📖 **Comprehensive Recipe Library:** Explore thousands of community recipes filtered by category, prep time, difficulty, and dietary tags.\n- 🤖 **Chef AI Culinary Assistant:** 24/7 intelligent cooking guidance, instant ingredient substitutions, and dynamic portion scaling.\n- 🌟 **Premium Creator Membership:** Unlock secret gourmet recipes, ad-free browsing, and exclusive chef badges.\n- 🍳 **Community Recipe Uploads:** Share your favorite dishes with photos, step-by-step instructions, and automatic nutrition breakdowns.\n- 💖 **Favorites & Personal Dashboard:** Save, bookmark, and manage your favorite dishes in a personal recipe box."
-    },
-    {
-      "id": "creator_and_platform_info",
-      "category": "Platform Creator & Vision",
-      "keywords": [
-        "who created this platform",
-        "who built recipehub",
-        "who is the developer",
-        "creator of recipehub",
-        "developer info",
-        "why recipehub",
-        "recipehub team",
-        "built by"
+        "platform overview", "what is this platform"
       ],
       "phrases": [
-        "who created this platform",
+        "what is recipehub & how does it work",
+        "what is recipehub and how does it work",
+        "what is recipehub",
+        "how does recipehub work",
+        "tell me about recipehub",
+        "about recipehub"
+      ],
+      "response": "🍽️ **RecipeHub - Full-Stack Culinary Platform**\n\nRecipeHub is a full-stack online recipe-sharing and culinary platform. It allows food enthusiasts to discover, search, and save diverse recipes, interact with community creators, and utilize an AI-powered smart cooking assistant (\"Chef RecipeHub AI\") for instant culinary guidance."
+    },
+    {
+      "id": "home_page",
+      "category": "Home Page Features",
+      "keywords": [
+        "home page",
+        "homepage",
+        "what on home page",
+        "featured recipes",
+        "trending recipes"
+      ],
+      "phrases": [
+        "what can i find on the home page",
+        "what is on the homepage",
+        "what can i see on the home page",
+        "home page features"
+      ],
+      "response": "🏠 **RecipeHub Home Page Features**\n\nThe Home page features platform highlights, featured and trending recipes, quick search access, promotional banners, community highlights, and direct entry points to browse different culinary categories."
+    },
+    {
+      "id": "browse_and_search",
+      "category": "Browse & Search Recipes",
+      "keywords": [
+        "browse recipes",
+        "search recipes",
+        "how to search",
+        "find recipes"
+      ],
+      "phrases": [
+        "how do i browse and search for recipes",
+        "how to search recipes",
+        "how to browse recipes",
+        "how do i find recipes"
+      ],
+      "response": "🔍 **Browse & Search Recipes**\n\nYou can explore dishes by visiting the \"Browse Recipes\" page from the navigation bar. There, you can filter recipes by categories, ingredients, prep time, and dietary preferences using the interactive search and filter tools."
+    },
+    {
+      "id": "filter_prep_ingredients",
+      "category": "Recipe Filtering",
+      "keywords": [
+        "filter recipes",
+        "prep time filter",
+        "filter by ingredients",
+        "dietary tags",
+        "cooking time filter"
+      ],
+      "phrases": [
+        "can i filter recipes by preparation time or ingredients",
+        "filter by prep time",
+        "filter by ingredients",
+        "can i filter recipes by cooking time"
+      ],
+      "response": "⏱️ **Filtering Recipes by Time & Ingredients**\n\nYes, the Browse Recipes section includes advanced filtering options where you can sort dishes based on cooking time, specific ingredients, and dietary tags (such as vegan, low-carb, or quick meals)."
+    },
+    {
+      "id": "recipe_details",
+      "category": "Detailed Recipe View",
+      "keywords": [
+        "detailed instructions",
+        "view recipe details",
+        "step by step instructions",
+        "nutritional details"
+      ],
+      "phrases": [
+        "how do i view detailed instructions for a recipe",
+        "view recipe instructions",
+        "how to see recipe details",
+        "detailed recipe instructions"
+      ],
+      "response": "📖 **Viewing Detailed Recipe Instructions**\n\nBy clicking on any recipe card from the Browse or Home page, you will be redirected to the detailed recipe view, which displays step-by-step cooking instructions, ingredient lists, preparation time, and nutritional details."
+    },
+    {
+      "id": "platform_mission",
+      "category": "Platform Mission",
+      "keywords": [
+        "mission",
+        "mission of recipehub",
+        "recipehub goal",
+        "why recipehub"
+      ],
+      "phrases": [
+        "what is the mission of recipehub",
+        "mission of recipehub",
+        "what is recipehub's goal",
+        "recipehub mission statement"
+      ],
+      "response": "🎯 **The Mission of RecipeHub**\n\nThe mission of RecipeHub is to connect food lovers, home cooks, and professional chefs in a vibrant digital community. We aim to make cooking accessible, creative, and fun through collaborative recipe sharing and smart AI technology."
+    },
+    {
+      "id": "creator_and_developers",
+      "category": "Platform Developers",
+      "keywords": [
         "who built recipehub",
-        "who is the developer",
-        "who made this app",
         "who created recipehub",
-        "why was recipehub created"
-      ],
-      "response": "👨‍💻 **About the Creator & Vision of RecipeHub**\n\nRecipeHub was designed and developed as a cutting-edge full-stack web application aimed at modernizing home cooking and recipe sharing.\n\n### 💡 **Mission:**\nTo connect food enthusiasts around the globe through seamless recipe sharing, intelligent AI cooking assistance, and a vibrant community of creators.\n\n- **Tech Stack:** Next.js, Express.js, MongoDB, Stripe API, BetterAuth, and Google Gemini 1.5/2.0 AI."
-    },
-    {
-      "id": "premium_membership",
-      "category": "Membership & Stripe Payment",
-      "keywords": [
-        "premium",
-        "membership",
-        "subscribe",
-        "subscription",
-        "price",
-        "pricing",
-        "cost",
-        "stripe",
-        "buy premium",
-        "upgrade",
-        "already premium",
-        "ispremium",
-        "how does premium work",
-        "premium access"
+        "developers",
+        "built recipehub",
+        "who made recipehub"
       ],
       "phrases": [
-        "how does premium access work",
-        "how much is premium",
-        "how to buy premium",
-        "what do I get with premium",
-        "already premium",
-        "already bought membership",
-        "tell me about premium"
+        "who built recipehub",
+        "who created recipehub",
+        "who made recipehub",
+        "who are the developers of recipehub"
       ],
-      "response": "🌟 **RecipeHub Premium Membership & Benefits**\n\nUpgrade to **RecipeHub Premium** to unlock the complete culinary experience!\n\n### 💎 **Exclusive Premium Benefits:**\n- 🔓 **Unlimited Pro Recipe Unlocks:** Full access to secret gourmet & chef-special recipes.\n- 🤖 **Unlimited Chef AI Guidance:** 24/7 unrestricted culinary Q&A and instant recipe creation.\n- ⚡ **Ad-Free Browsing:** Enjoy distraction-free cooking and clean layout.\n- 🏅 **Exclusive Creator Badge:** Display a verified Chef badge on community posts.\n\n### 💳 **Pricing & Secure Stripe Checkout:**\n- **Explorer (Free):** Access public community recipes and standard search.\n- **Chef Premium:** Secure 1-click checkout powered by Stripe.\n\n*Already a Premium Member?* If your account has `isPremium: true`, all premium perks are activated automatically without re-purchasing!"
+      "response": "👨‍💻 **Who Built RecipeHub**\n\nRecipeHub is built by passionate full-stack developers specializing in modern web technologies like Next.js, the MERN stack, and advanced AI integrations to deliver a seamless culinary experience."
     },
     {
-      "id": "browse_and_filter",
-      "category": "Recipe Search & Category Filtering",
+      "id": "contact_support",
+      "category": "Support & Contact",
       "keywords": [
-        "browse",
-        "search",
-        "filter",
-        "category",
-        "categories",
-        "ingredients search",
-        "favorite",
-        "save recipe",
-        "bookmark",
-        "how to search recipes",
-        "find dishes"
+        "contact support",
+        "contact team",
+        "reach support",
+        "support team"
       ],
       "phrases": [
-        "how to search recipes",
-        "how to find recipes",
-        "search by ingredient",
-        "how to save favorite",
-        "filter by category",
-        "how to bookmark"
+        "how can i contact the recipehub support team",
+        "contact support",
+        "how to reach support",
+        "contact team"
       ],
-      "response": "🔍 **Recipe Search & Smart Filtering Guide**\n\nFinding your next delicious meal is simple on RecipeHub:\n\n1. **Search Bar:** Type dish names or ingredients (e.g., *chicken, garlic, pasta, chocolate*).\n2. **Category Filter:** Filter by **Desserts, Main Dishes, Snacks, Quick & Easy, Healthy, Vegan, and Breakfast**.\n3. **Sorting:** Sort recipes by cooking time, difficulty, or popularity rating.\n4. **Saving Favorites:** Click the **Heart (Favorite)** icon on any recipe card to store it in your personal dashboard collection!"
+      "response": "📞 **Contacting RecipeHub Support**\n\nYou can easily reach out to us by visiting the \"Contact\" page on the website. Fill out the contact form with your name, email, and message, and our support team will get back to you promptly."
     },
     {
-      "id": "ai_features",
-      "category": "AI Tools & Smart Features",
+      "id": "feedback_requests",
+      "category": "Feedback & Feature Requests",
       "keywords": [
-        "ai recipe",
-        "nutrition",
-        "calories",
-        "scale recipe",
-        "ai generator",
-        "nutrition calculator",
-        "chatbot guide",
-        "how to use ai",
+        "submit feedback",
+        "feature requests",
+        "share suggestions",
+        "report issue"
+      ],
+      "phrases": [
+        "can i submit feedback or feature requests through the platform",
+        "submit feedback",
+        "feature request",
+        "how to report issue"
+      ],
+      "response": "💡 **Submitting Feedback & Feature Requests**\n\nAbsolutely! We value user feedback. You can use the Contact page to share your suggestions, report issues, or request new features for the platform."
+    },
+    {
+      "id": "user_dashboard",
+      "category": "User Dashboard Features",
+      "keywords": [
+        "user dashboard",
+        "dashboard features",
+        "manage profile",
+        "saved recipes dashboard"
+      ],
+      "phrases": [
+        "what features are available in the user dashboard",
+        "user dashboard features",
+        "what can i do in dashboard",
+        "dashboard features overview"
+      ],
+      "response": "📊 **User Dashboard Features**\n\nThe User Dashboard allows you to manage your profile, view your saved or favorite recipes, track your submitted community recipes, and manage your account settings or membership status."
+    },
+    {
+      "id": "save_favorites",
+      "category": "Saving Favorite Recipes",
+      "keywords": [
+        "save favorite recipes",
+        "favorite recipes",
+        "bookmark recipe",
+        "save dish"
+      ],
+      "phrases": [
+        "how do i save my favorite recipes",
+        "save favorite recipes",
+        "how to bookmark a recipe",
+        "how to save recipes"
+      ],
+      "response": "💖 **Saving Favorite Recipes**\n\nWhen browsing any recipe on the platform, you can click the bookmark or favorite icon on the recipe card. This instantly saves the dish to your personal dashboard for quick future access."
+    },
+    {
+      "id": "share_own_recipes",
+      "category": "Recipe Submission",
+      "keywords": [
+        "share my own recipes",
+        "upload recipe",
+        "submit recipe",
+        "publish dish"
+      ],
+      "phrases": [
+        "can i share my own recipes on recipehub",
+        "can i upload my own recipes",
+        "how to post a recipe",
+        "share my recipe"
+      ],
+      "response": "👨‍🍳 **Sharing Your Own Recipes**\n\nYes! Registered users can submit and share their own secret recipes with the community through the recipe creation feature in their dashboard."
+    },
+    {
+      "id": "premium_access",
+      "category": "RecipeHub Premium",
+      "keywords": [
+        "tell me about recipehub premium access",
+        "premium access",
+        "recipehub premium",
+        "premium membership"
+      ],
+      "phrases": [
+        "tell me about recipehub premium access",
+        "tell me about premium access",
+        "what is recipehub premium",
+        "premium access features"
+      ],
+      "response": "🌟 **RecipeHub Premium Access**\n\nRecipeHub Premium access unlocks exclusive features, including unlimited access to advanced AI cooking guides, premium chef-curated recipes, priority customer support, ad-free browsing, and special community creator badges."
+    },
+    {
+      "id": "chef_ai_assistant",
+      "category": "Chef RecipeHub AI Assistant",
+      "keywords": [
+        "what is chef recipehub ai",
+        "chef recipehub ai",
+        "ai assistant",
         "chef ai"
       ],
       "phrases": [
-        "how to use ai",
-        "how to use chef ai",
-        "nutrition calculator",
-        "scale ingredient portions",
-        "ai recipe generator"
+        "what is chef recipehub ai",
+        "what is the chef ai",
+        "tell me about chef recipehub ai",
+        "chef ai assistant"
       ],
-      "response": "🤖 **RecipeHub AI Tools & Smart Features**\n\nOur platform integrates Google Gemini AI to elevate your cooking experience:\n\n- 💬 **Chef AI Assistant (Right Here!):** Ask about ingredient swaps, cooking techniques, flavor pairings, and baking math.\n- 📊 **Nutrition Breakdown:** Automatic calorie, protein, carbohydrate, and fat estimates per serving.\n- ⚖️ **Portion Scaler:** Dynamically scale ingredients for 2, 4, 8, or more guests.\n- 🪄 **Plant-Based & Allergy Substitutes:** Instant substitute ratios for eggs, dairy, gluten, or sugar!"
+      "response": "🤖 **Chef RecipeHub AI Assistant**\n\nChef RecipeHub AI is an intelligent culinary assistant integrated into the platform. It helps users discover quick recipe ideas, find ingredient substitutions, suggest cooking techniques, and answer platform-related questions instantly."
     },
     {
-      "id": "creator_and_upload",
-      "category": "Recipe Upload & Creator Guidelines",
+      "id": "chatbot_hybrid_system",
+      "category": "Chatbot Routing & Architecture",
       "keywords": [
-        "upload recipe",
-        "add recipe",
-        "create recipe",
-        "publish dish",
-        "creator policy",
-        "image upload",
-        "imgbb",
-        "how to post a recipe"
+        "how does the chatbot handle my questions",
+        "chatbot hybrid system",
+        "how chatbot works",
+        "gemini ai rotation"
       ],
       "phrases": [
-        "how to post a recipe",
-        "upload my own recipe",
-        "how to share dish",
-        "creator guidelines",
-        "how to upload recipe"
+        "how does the chatbot handle my questions",
+        "how does the chatbot work",
+        "how do you answer questions",
+        "chatbot response system"
       ],
-      "response": "👨‍🍳 **Uploading & Publishing Recipes on RecipeHub**\n\nShare your signature dishes with our global culinary community!\n\n### 📝 **Step-by-Step Upload Guide:**\n1. Log into your account and click **\"Add Recipe\"** in the header navigation or dashboard.\n2. Fill in the recipe title, dish category, preparation time, cooking time, and serving count.\n3. List required ingredients with measurements and add step-by-step preparation instructions.\n4. Upload high-resolution dish photos (stored via ImgBB CDN).\n5. Click **Publish** to share your recipe with the world!"
-    },
-    {
-      "id": "account_and_login",
-      "category": "Account, Login & Security",
-      "keywords": [
-        "login",
-        "signup",
-        "register",
-        "account",
-        "profile",
-        "password",
-        "google login",
-        "betterauth",
-        "session",
-        "how to sign up"
-      ],
-      "phrases": [
-        "how to sign up",
-        "how to login",
-        "forgot password",
-        "google sign in",
-        "edit profile",
-        "account security"
-      ],
-      "response": "🔐 **Account & Authentication FAQs**\n\n- **Sign Up / Login:** Create an account via email & password or sign in with 1-click **Google OAuth**.\n- **Security:** Secured using BetterAuth with encrypted JWT session tokens.\n- **Dashboard:** Manage your profile avatar, bio, uploaded recipes, and bookmarked favorites from your **Dashboard**.\n- **Guest Access:** Guests can search and view public recipes; log in to save favorites and unlock Chef AI guidance!"
-    },
-    {
-      "id": "support_and_contact",
-      "category": "Support, Terms & Contact",
-      "keywords": [
-        "contact",
-        "support",
-        "help",
-        "privacy policy",
-        "terms of service",
-        "feedback",
-        "customer service"
-      ],
-      "phrases": [
-        "how to contact support",
-        "where to get help",
-        "privacy policy",
-        "terms of service"
-      ],
-      "response": "📞 **Support & Legal Policies**\n\n- **Customer Support:** Have questions or feedback? Contact us via the **Contact Us** page.\n- **Terms & Privacy:** View our transparent **Terms of Service** and **Privacy Policy** links in the page footer.\n- **Community Guidelines:** Be respectful, share accurate culinary instructions, and credit original recipe sources!"
+      "response": "⚙️ **Smart Hybrid Chatbot System**\n\nThe chatbot uses a smart hybrid system. For core project FAQs and platform details, it responds instantly from a verified local knowledge base. For custom culinary queries or baking advice, it leverages an advanced Gemini AI multi-key rotation system."
     }
   ]
 }
