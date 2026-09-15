@@ -577,7 +577,43 @@ const getAdminTransactions = async (req, res, next) => {
 };
 
 /**
- * Get global settings (commission rate)
+ * Public endpoint to fetch dynamic pricing plans for /pricing page
+ * Route: GET /pricing-plans
+ */
+const getPublicPricingPlans = async (req, res, next) => {
+  try {
+    let setting = await Setting.findOne({ key: "global_settings" }).lean();
+    if (!setting) {
+      setting = {
+        proFoodiePrice: 9.99,
+        proFoodieDesc: "Unlock premium gourmet recipes, chef secrets, and ad-free experience.",
+        masterChefPrice: 19.99,
+        masterChefDesc: "Designed for professional culinary creators and restaurant chefs.",
+      };
+    }
+    res.send({
+      success: true,
+      commissionRate: setting.commissionRate !== undefined ? setting.commissionRate : 20,
+      plans: {
+        proFoodie: {
+          price: `$${Number(setting.proFoodiePrice || 9.99).toFixed(2)}`,
+          rawPrice: Number(setting.proFoodiePrice || 9.99),
+          description: setting.proFoodieDesc || "Unlock premium gourmet recipes, chef secrets, and ad-free experience.",
+        },
+        masterChef: {
+          price: `$${Number(setting.masterChefPrice || 19.99).toFixed(2)}`,
+          rawPrice: Number(setting.masterChefPrice || 19.99),
+          description: setting.masterChefDesc || "Designed for professional culinary creators and restaurant chefs.",
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get global settings (commission rate & plan pricing)
  * Route: GET /admin/settings
  */
 const getAdminSettings = async (req, res, next) => {
@@ -587,6 +623,10 @@ const getAdminSettings = async (req, res, next) => {
       setting = await Setting.create({
         key: "global_settings",
         commissionRate: 20,
+        proFoodiePrice: 9.99,
+        proFoodieDesc: "Unlock premium gourmet recipes, chef secrets, and ad-free experience.",
+        masterChefPrice: 19.99,
+        masterChefDesc: "Designed for professional culinary creators and restaurant chefs.",
         updatedBy: "admin",
       });
     }
@@ -600,36 +640,46 @@ const getAdminSettings = async (req, res, next) => {
 };
 
 /**
- * Update global settings (commission rate)
+ * Update global settings (commission rate & plan pricing)
  * Route: POST /admin/settings
  */
 const updateAdminSettings = async (req, res, next) => {
   try {
-    const { commissionRate } = req.body;
-    const rate = Number(commissionRate);
+    const { commissionRate, proFoodiePrice, proFoodieDesc, masterChefPrice, masterChefDesc } = req.body;
+    const updateFields = {
+      updatedBy: req.user?.email || "admin",
+      updatedAt: new Date(),
+    };
 
-    if (isNaN(rate) || rate < 0 || rate > 100) {
-      return res.status(400).send({
-        success: false,
-        message: "Commission rate must be a number between 0 and 100",
-      });
+    if (commissionRate !== undefined) {
+      const rate = Number(commissionRate);
+      if (!isNaN(rate) && rate >= 0 && rate <= 100) {
+        updateFields.commissionRate = rate;
+      }
+    }
+
+    if (proFoodiePrice !== undefined) {
+      updateFields.proFoodiePrice = Math.max(0, Number(proFoodiePrice) || 9.99);
+    }
+    if (proFoodieDesc !== undefined) {
+      updateFields.proFoodieDesc = proFoodieDesc.trim();
+    }
+    if (masterChefPrice !== undefined) {
+      updateFields.masterChefPrice = Math.max(0, Number(masterChefPrice) || 19.99);
+    }
+    if (masterChefDesc !== undefined) {
+      updateFields.masterChefDesc = masterChefDesc.trim();
     }
 
     const updated = await Setting.findOneAndUpdate(
       { key: "global_settings" },
-      {
-        $set: {
-          commissionRate: rate,
-          updatedBy: req.user?.email || "admin",
-          updatedAt: new Date(),
-        },
-      },
+      { $set: updateFields },
       { new: true, upsert: true }
     );
 
     res.send({
       success: true,
-      message: `Global platform commission updated to ${rate}%!`,
+      message: "Admin settings & plan pricing updated successfully!",
       settings: updated,
     });
   } catch (error) {
@@ -654,4 +704,5 @@ module.exports = {
   getAdminTransactions,
   getAdminSettings,
   updateAdminSettings,
+  getPublicPricingPlans,
 };

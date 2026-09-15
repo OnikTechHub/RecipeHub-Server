@@ -77,7 +77,8 @@ router.delete(
 // Manage Transactions
 router.get("/admin/transactions", optionalAuth, verifyAdmin, adminController.getAdminTransactions);
 
-// Manage Settings (Platform Commission)
+// Manage Settings (Platform Commission & Plan Pricing)
+router.get("/pricing-plans", adminController.getPublicPricingPlans);
 router.get("/admin/settings", optionalAuth, verifyAdmin, adminController.getAdminSettings);
 router.post("/admin/settings", optionalAuth, verifyAdmin, adminController.updateAdminSettings);
 
