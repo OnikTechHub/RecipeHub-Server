@@ -25,6 +25,9 @@ router.get("/recipes/:id/access", validateObjectId("id"), optionalAuth, recipeCo
 // Create recipe
 router.post("/recipes", optionalAuth, recipeController.createRecipe);
 
+// Submit recipe rating & review
+router.post("/recipes/:id/reviews", validateObjectId("id"), optionalAuth, recipeController.addRecipeReview);
+
 // Toggle recipe like
 router.patch("/recipes/:id/like", validateObjectId("id"), optionalAuth, recipeController.toggleLike);
 

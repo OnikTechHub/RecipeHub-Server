@@ -314,33 +314,24 @@ const checkRecipeAccess = async (req, res, next) => {
       });
     }
 
-    // Strict Free vs Paid recipe check
     const isPaidRecipe =
       recipe.recipeType === "Paid" ||
       recipe.isPaid === true ||
       Number(recipe.price || 0) > 0;
 
-    if (!isPaidRecipe) {
-      return res.send({
-        success: true,
-        hasAccess: true,
-        reason: "free",
-      });
-    }
-
-    // Unauthenticated user attempting to access a paid recipe
+    // Unauthenticated user attempting to access any recipe
     if (!email || !email.trim()) {
       return res.send({
         success: true,
         hasAccess: false,
         reason: "unauthenticated",
-        price: recipe.price || 5,
+        price: recipe.price || 0,
       });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Author / Creator of the recipe (Free access to own recipes)
+    // Author / Creator of the recipe (Access to own recipes)
     const authorEmails = [
       recipe.authorEmail,
       recipe.userEmail,
@@ -359,10 +350,12 @@ const checkRecipeAccess = async (req, res, next) => {
       });
     }
 
-    // Admin user access (Universal free access for all admins: root or sub-admin)
     const userDoc = await User.findByEmailWithFallback(normalizedEmail);
+    const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "admin@recipehub.com").toLowerCase();
+
+    // Admin user access (Universal 100% lifetime free access for all admins)
     if (
-      normalizedEmail === ADMIN_EMAIL.toLowerCase() ||
+      normalizedEmail === ADMIN_EMAIL ||
       normalizedEmail === "admin@recipehub.com" ||
       (userDoc && userDoc.role === "admin") ||
       req.user?.role === "admin"
@@ -374,7 +367,43 @@ const checkRecipeAccess = async (req, res, next) => {
       });
     }
 
-    // Check if user purchased THIS SPECIFIC recipe (case-insensitive email & flexible recipeId match)
+    const isPremiumUser = userDoc && (userDoc.isPremium === true || userDoc.role === "premium");
+
+    if (isPremiumUser) {
+      // Standard/Free recipe unlocked automatically for Premium members
+      if (!isPaidRecipe) {
+        return res.send({
+          success: true,
+          hasAccess: true,
+          reason: "premium",
+        });
+      }
+
+      // Exclusive paid recipe: check if Premium user purchased this specific paid recipe
+      const purchased = await Payment.findOne({
+        userEmail: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") },
+        recipeId: { $in: [id.toString(), id] },
+        paymentStatus: "paid",
+      });
+
+      if (purchased) {
+        return res.send({
+          success: true,
+          hasAccess: true,
+          reason: "purchased",
+        });
+      }
+
+      return res.send({
+        success: true,
+        hasAccess: false,
+        reason: "paid_locked",
+        price: recipe.price || 5,
+      });
+    }
+
+    // Standard Free User (Not Premium, Not Admin, Not Author)
+    // All recipes are locked by default until they upgrade to Premium Membership or purchase
     const purchased = await Payment.findOne({
       userEmail: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") },
       recipeId: { $in: [id.toString(), id] },
@@ -392,8 +421,90 @@ const checkRecipeAccess = async (req, res, next) => {
     return res.send({
       success: true,
       hasAccess: false,
-      reason: "locked",
-      price: recipe.price || 5,
+      reason: "membership_required",
+      price: recipe.price || 0,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Submit review & rating for a recipe and recalculate global average rating
+ * Route: POST /recipes/:id/reviews
+ */
+const addRecipeReview = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rating, comment, userName, userEmail, userImage } = req.body;
+
+    if (!userEmail) {
+      return res.status(401).send({
+        success: false,
+        message: "You must be logged in to submit a review.",
+      });
+    }
+
+    const numRating = Number(rating);
+    if (!numRating || numRating < 1 || numRating > 5) {
+      return res.status(400).send({
+        success: false,
+        message: "Please select a valid rating between 1 and 5 stars.",
+      });
+    }
+
+    if (!comment || !comment.trim()) {
+      return res.status(400).send({
+        success: false,
+        message: "Please write a review comment.",
+      });
+    }
+
+    const recipe = await Recipe.findById(id);
+    if (!recipe) {
+      return res.status(404).send({
+        success: false,
+        message: "Recipe not found.",
+      });
+    }
+
+    const newReview = {
+      userName: userName || userEmail.split("@")[0],
+      userEmail: userEmail.trim().toLowerCase(),
+      userImage: userImage || "",
+      rating: numRating,
+      comment: comment.trim(),
+      createdAt: new Date(),
+    };
+
+    const existingReviews = recipe.reviews || [];
+    const existingIdx = existingReviews.findIndex(
+      (r) => r.userEmail && r.userEmail.toLowerCase() === userEmail.trim().toLowerCase()
+    );
+
+    if (existingIdx >= 0) {
+      existingReviews[existingIdx] = newReview;
+    } else {
+      existingReviews.push(newReview);
+    }
+
+    const totalStars = existingReviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0);
+    const avgRating = Number((totalStars / existingReviews.length).toFixed(1));
+
+    recipe.reviews = existingReviews;
+    recipe.ratings = avgRating;
+    recipe.reviewCount = existingReviews.length;
+
+    await recipe.save();
+
+    res.send({
+      success: true,
+      message: "Thank you for your rating & review!",
+      data: {
+        ratings: recipe.ratings,
+        reviewCount: recipe.reviewCount,
+        reviews: recipe.reviews,
+      },
     });
   } catch (error) {
     next(error);
@@ -493,6 +604,7 @@ module.exports = {
   getFeaturedRecipes,
   getMyRecipes,
   checkRecipeAccess,
+  addRecipeReview,
   getRecipesCount,
   deleteRecipe,
   updateRecipe,
