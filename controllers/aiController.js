@@ -1,7 +1,8 @@
 const { generateAIContent } = require("../services/geminiService");
+const { matchLocalKnowledge } = require("../services/knowledgeMatcher");
 
 /**
- * Global AI Chatbot Endpoint
+ * Global AI Chatbot Endpoint with Smart Hybrid Intent Matching
  * Route: POST /api/ai/chat
  */
 const handleAIChat = async (req, res, next) => {
@@ -14,6 +15,17 @@ const handleAIChat = async (req, res, next) => {
       });
     }
 
+    // 1. Smart Hybrid Check: Query Local Knowledge Base First
+    const localMatch = matchLocalKnowledge(message);
+    if (localMatch.matched && localMatch.reply) {
+      return res.send({
+        success: true,
+        reply: localMatch.reply,
+        source: "local_knowledge_base",
+      });
+    }
+
+    // 2. Custom / Live Query: Route to Gemini 10-Key API Utility
     const systemInstruction = `You are Chef RecipeHub, an expert, friendly AI culinary assistant for the RecipeHub platform.
 Your job is to answer questions about cooking, recipes, ingredients, flavor pairings, dietary substitutes, cooking techniques, and RecipeHub features.
 Keep responses helpful, appetizing, concise, structured with bullet points or bold text where helpful, and polite. Always maintain a warm, culinary expert tone.`;
@@ -32,6 +44,7 @@ Keep responses helpful, appetizing, concise, structured with bullet points or bo
     res.send({
       success: true,
       reply: reply,
+      source: "gemini_ai",
     });
   } catch (error) {
     console.error("Gemini API Error Details:", error?.response?.data || error?.message || error);

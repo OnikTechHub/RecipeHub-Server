@@ -1,0 +1,91 @@
+const fs = require("fs");
+const path = require("path");
+
+let knowledgeData = null;
+
+/**
+ * Load local chatbot knowledge base from JSON file
+ */
+const loadKnowledgeBase = () => {
+  try {
+    const filePath = path.join(__dirname, "../data/chatbotKnowledge.json");
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, "utf-8");
+      knowledgeData = JSON.parse(content);
+    }
+  } catch (err) {
+    console.error("Failed to load chatbotKnowledge.json:", err.message);
+  }
+};
+
+// Initial load
+loadKnowledgeBase();
+
+/**
+ * Find local knowledge match for user query
+ * @param {string} userQuery - Raw user prompt
+ * @returns {object} { matched: boolean, intent?: string, reply?: string, source?: string }
+ */
+const matchLocalKnowledge = (userQuery) => {
+  if (!knowledgeData || !Array.isArray(knowledgeData.intents) || !userQuery) {
+    return { matched: false };
+  }
+
+  const cleanQuery = userQuery.toLowerCase().trim();
+
+  // 1. Direct Phrase Match Check
+  for (const intent of knowledgeData.intents) {
+    if (Array.isArray(intent.phrases)) {
+      for (const phrase of intent.phrases) {
+        if (cleanQuery.includes(phrase.toLowerCase())) {
+          console.log(`[Hybrid Router] Matched Local Knowledge Phrase: "${phrase}" (Intent: ${intent.id})`);
+          return {
+            matched: true,
+            intent: intent.id,
+            source: "local_knowledge_base",
+            reply: intent.response,
+          };
+        }
+      }
+    }
+  }
+
+  // 2. Keyword Overlap Scoring Check
+  let bestIntent = null;
+  let maxScore = 0;
+
+  for (const intent of knowledgeData.intents) {
+    if (!Array.isArray(intent.keywords)) continue;
+
+    let score = 0;
+    for (const kw of intent.keywords) {
+      const lowerKw = kw.toLowerCase();
+      if (cleanQuery.includes(lowerKw)) {
+        score += lowerKw.split(" ").length; // Give higher weight to multi-word keyword phrases
+      }
+    }
+
+    if (score > maxScore) {
+      maxScore = score;
+      bestIntent = intent;
+    }
+  }
+
+  // Threshold: At least score >= 2 for confident keyword match
+  if (bestIntent && maxScore >= 2) {
+    console.log(`[Hybrid Router] Matched Local Knowledge Keywords: (Score: ${maxScore}, Intent: ${bestIntent.id})`);
+    return {
+      matched: true,
+      intent: bestIntent.id,
+      source: "local_knowledge_base",
+      reply: bestIntent.response,
+    };
+  }
+
+  return { matched: false };
+};
+
+module.exports = {
+  matchLocalKnowledge,
+  loadKnowledgeBase,
+};
