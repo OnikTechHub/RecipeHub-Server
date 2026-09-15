@@ -2,7 +2,7 @@
   "intents": [
     {
       "id": "overview",
-      "category": "Project Overview",
+      "category": "Project Overview & Mission",
       "keywords": [
         "what is recipehub",
         "about recipehub",
@@ -14,7 +14,8 @@
         "what is this app",
         "how does recipehub work",
         "project overview",
-        "about website"
+        "about website",
+        "what can I do on recipehub"
       ],
       "phrases": [
         "what is recipehub",
@@ -25,44 +26,179 @@
         "what is this website",
         "what is this app",
         "about recipehub",
-        "recipehub overview"
+        "recipehub overview",
+        "what can I do here"
       ],
-      "response": "🍽️ **RecipeHub - Full-Stack Culinary Platform**\n\n**RecipeHub** is a state-of-the-art, interactive online recipe sharing and culinary community platform designed for food lovers, home cooks, and professional chefs.\n\n### 🌟 **Core Features & Capabilities:**\n- 📖 **Comprehensive Recipe Library:** Browse, search, and filter thousands of recipes by category, ingredients, prep time, and dietary needs.\n- 🤖 **Chef AI Culinary Assistant:** 24/7 AI-powered cooking guidance, ingredient substitution advice, and dynamic recipe scaling.\n- 🌟 **Premium Creator Membership:** Unlock secret gourmet recipes, enjoy an ad-free experience, and earn exclusive creator badges.\n- 🍳 **Community Recipe Uploads:** Share your own recipes with photos, step-by-step instructions, and automatic nutrition breakdowns.\n- 💖 **Favorites & Personal Collections:** Save and organize your top recipes in your personal user dashboard."
+      "response": "🍽️ **RecipeHub - Modern Full-Stack Culinary Platform**\n\n**RecipeHub** is a premier, interactive online recipe-sharing and culinary community platform designed for food lovers, home cooks, and professional chefs.\n\n### 🌟 **Key Highlights & Features:**\n- 📖 **Comprehensive Recipe Library:** Explore thousands of community recipes filtered by category, prep time, difficulty, and dietary tags.\n- 🤖 **Chef AI Culinary Assistant:** 24/7 intelligent cooking guidance, instant ingredient substitutions, and dynamic portion scaling.\n- 🌟 **Premium Creator Membership:** Unlock secret gourmet recipes, ad-free browsing, and exclusive chef badges.\n- 🍳 **Community Recipe Uploads:** Share your favorite dishes with photos, step-by-step instructions, and automatic nutrition breakdowns.\n- 💖 **Favorites & Personal Dashboard:** Save, bookmark, and manage your favorite dishes in a personal recipe box."
+    },
+    {
+      "id": "creator_and_platform_info",
+      "category": "Platform Creator & Vision",
+      "keywords": [
+        "who created this platform",
+        "who built recipehub",
+        "who is the developer",
+        "creator of recipehub",
+        "developer info",
+        "why recipehub",
+        "recipehub team",
+        "built by"
+      ],
+      "phrases": [
+        "who created this platform",
+        "who built recipehub",
+        "who is the developer",
+        "who made this app",
+        "who created recipehub",
+        "why was recipehub created"
+      ],
+      "response": "👨‍💻 **About the Creator & Vision of RecipeHub**\n\nRecipeHub was designed and developed as a cutting-edge full-stack web application aimed at modernizing home cooking and recipe sharing.\n\n### 💡 **Mission:**\nTo connect food enthusiasts around the globe through seamless recipe sharing, intelligent AI cooking assistance, and a vibrant community of creators.\n\n- **Tech Stack:** Next.js, Express.js, MongoDB, Stripe API, BetterAuth, and Google Gemini 1.5/2.0 AI."
     },
     {
       "id": "premium_membership",
-      "category": "Membership & Payment",
-      "keywords": ["premium", "membership", "subscribe", "subscription", "price", "pricing", "cost", "stripe", "buy premium", "upgrade", "already premium", "ispremium"],
-      "phrases": ["how much is premium", "how to buy premium", "what do I get with premium", "already premium", "already bought membership"],
-      "response": "🌟 **RecipeHub Premium Membership**\n\nUpgrade to Premium to elevate your culinary experience!\n\n### **Benefits of Premium:**\n- 🔓 **Unlimited Recipe Unlocks:** Full access to all secret & pro chef recipes.\n- 🤖 **Unlimited Chef AI:** Unrestricted 24/7 AI chat guidance and recipe generation.\n- ⚡ **Ad-Free Browsing:** Seamless cooking experience.\n- 💎 **Exclusive Creator Badge:** Stand out on community recipe posts.\n\n### **Pricing Plans:**\n- **Explorer Free:** Access public community recipes & standard search.\n- **Chef Premium:** Flexible monthly or lifetime access via secure Stripe checkout.\n\n*Already a Premium Member?* Your account status will automatically reflect `isPremium: true` and unlock all pro features without additional checkout!"
+      "category": "Membership & Stripe Payment",
+      "keywords": [
+        "premium",
+        "membership",
+        "subscribe",
+        "subscription",
+        "price",
+        "pricing",
+        "cost",
+        "stripe",
+        "buy premium",
+        "upgrade",
+        "already premium",
+        "ispremium",
+        "how does premium work",
+        "premium access"
+      ],
+      "phrases": [
+        "how does premium access work",
+        "how much is premium",
+        "how to buy premium",
+        "what do I get with premium",
+        "already premium",
+        "already bought membership",
+        "tell me about premium"
+      ],
+      "response": "🌟 **RecipeHub Premium Membership & Benefits**\n\nUpgrade to **RecipeHub Premium** to unlock the complete culinary experience!\n\n### 💎 **Exclusive Premium Benefits:**\n- 🔓 **Unlimited Pro Recipe Unlocks:** Full access to secret gourmet & chef-special recipes.\n- 🤖 **Unlimited Chef AI Guidance:** 24/7 unrestricted culinary Q&A and instant recipe creation.\n- ⚡ **Ad-Free Browsing:** Enjoy distraction-free cooking and clean layout.\n- 🏅 **Exclusive Creator Badge:** Display a verified Chef badge on community posts.\n\n### 💳 **Pricing & Secure Stripe Checkout:**\n- **Explorer (Free):** Access public community recipes and standard search.\n- **Chef Premium:** Secure 1-click checkout powered by Stripe.\n\n*Already a Premium Member?* If your account has `isPremium: true`, all premium perks are activated automatically without re-purchasing!"
     },
     {
       "id": "browse_and_filter",
-      "category": "Recipe Search & Filtering",
-      "keywords": ["browse", "search", "filter", "category", "categories", "ingredients search", "favorite", "save recipe", "bookmark"],
-      "phrases": ["how to find recipes", "search by ingredient", "how to save favorite", "filter by category"],
-      "response": "🔍 **Browsing & Searching Recipes on RecipeHub**\n\nFinding the perfect dish is quick and easy:\n\n1. **Search Bar:** Type dish names or specific ingredients (e.g., *chicken, garlic, pasta*).\n2. **Categories:** Browse popular tags such as **Desserts, Main Dishes, Snacks, Quick & Easy, Healthy, and Vegan**.\n3. **Filtering:** Sort recipes by popularity, cooking time, and preparation difficulty.\n4. **Saving Favorites:** Click the **Heart (Favorite)** button on any recipe card to save it to your personal profile collection!"
+      "category": "Recipe Search & Category Filtering",
+      "keywords": [
+        "browse",
+        "search",
+        "filter",
+        "category",
+        "categories",
+        "ingredients search",
+        "favorite",
+        "save recipe",
+        "bookmark",
+        "how to search recipes",
+        "find dishes"
+      ],
+      "phrases": [
+        "how to search recipes",
+        "how to find recipes",
+        "search by ingredient",
+        "how to save favorite",
+        "filter by category",
+        "how to bookmark"
+      ],
+      "response": "🔍 **Recipe Search & Smart Filtering Guide**\n\nFinding your next delicious meal is simple on RecipeHub:\n\n1. **Search Bar:** Type dish names or ingredients (e.g., *chicken, garlic, pasta, chocolate*).\n2. **Category Filter:** Filter by **Desserts, Main Dishes, Snacks, Quick & Easy, Healthy, Vegan, and Breakfast**.\n3. **Sorting:** Sort recipes by cooking time, difficulty, or popularity rating.\n4. **Saving Favorites:** Click the **Heart (Favorite)** icon on any recipe card to store it in your personal dashboard collection!"
     },
     {
       "id": "ai_features",
-      "category": "AI Tools & Nutrition",
-      "keywords": ["ai recipe", "nutrition", "calories", "scale recipe", "ai generator", "nutrition calculator", "chatbot guide"],
-      "phrases": ["how to use ai", "nutrition calculator", "scale ingredient portions", "ai recipe generator"],
-      "response": "🤖 **RecipeHub AI Tools & Smart Features**\n\nWe bring modern artificial intelligence into your kitchen:\n\n- 💬 **Chef AI Assistant (Right Here!):** Ask me anything about ingredient substitutes, cooking temperatures, and meal pairings.\n- 📊 **Nutrition Breakdown:** Automatically calculates estimated calories, protein, carbs, and fats per serving.\n- ⚖️ **Dynamic Portion Scaler:** Easily adjust recipe ingredient quantities for 2, 4, 6, or more guests.\n- 🪄 **Smart Substitutes:** Out of buttermilk or eggs? Ask Chef AI for instant substitute ratios!"
+      "category": "AI Tools & Smart Features",
+      "keywords": [
+        "ai recipe",
+        "nutrition",
+        "calories",
+        "scale recipe",
+        "ai generator",
+        "nutrition calculator",
+        "chatbot guide",
+        "how to use ai",
+        "chef ai"
+      ],
+      "phrases": [
+        "how to use ai",
+        "how to use chef ai",
+        "nutrition calculator",
+        "scale ingredient portions",
+        "ai recipe generator"
+      ],
+      "response": "🤖 **RecipeHub AI Tools & Smart Features**\n\nOur platform integrates Google Gemini AI to elevate your cooking experience:\n\n- 💬 **Chef AI Assistant (Right Here!):** Ask about ingredient swaps, cooking techniques, flavor pairings, and baking math.\n- 📊 **Nutrition Breakdown:** Automatic calorie, protein, carbohydrate, and fat estimates per serving.\n- ⚖️ **Portion Scaler:** Dynamically scale ingredients for 2, 4, 8, or more guests.\n- 🪄 **Plant-Based & Allergy Substitutes:** Instant substitute ratios for eggs, dairy, gluten, or sugar!"
     },
     {
       "id": "creator_and_upload",
-      "category": "Recipe Upload & Creator Policy",
-      "keywords": ["upload recipe", "add recipe", "create recipe", "publish dish", "creator policy", "image upload", "imgbb"],
-      "phrases": ["how to post a recipe", "upload my own recipe", "how to share dish", "creator guidelines"],
-      "response": "👨‍🍳 **Uploading & Sharing Recipes on RecipeHub**\n\nShare your culinary creations with our global food community!\n\n### **How to Upload a Recipe:**\n1. Log into your RecipeHub account and click **\"Add Recipe\"** in the header or dashboard.\n2. Fill in the recipe title, dish category, prep time, cooking time, and serving size.\n3. Add step-by-step cooking instructions and list all required ingredients.\n4. Upload high-quality food photos (processed via ImgBB CDN).\n5. Click **Publish** to share your recipe with the community!"
+      "category": "Recipe Upload & Creator Guidelines",
+      "keywords": [
+        "upload recipe",
+        "add recipe",
+        "create recipe",
+        "publish dish",
+        "creator policy",
+        "image upload",
+        "imgbb",
+        "how to post a recipe"
+      ],
+      "phrases": [
+        "how to post a recipe",
+        "upload my own recipe",
+        "how to share dish",
+        "creator guidelines",
+        "how to upload recipe"
+      ],
+      "response": "👨‍🍳 **Uploading & Publishing Recipes on RecipeHub**\n\nShare your signature dishes with our global culinary community!\n\n### 📝 **Step-by-Step Upload Guide:**\n1. Log into your account and click **\"Add Recipe\"** in the header navigation or dashboard.\n2. Fill in the recipe title, dish category, preparation time, cooking time, and serving count.\n3. List required ingredients with measurements and add step-by-step preparation instructions.\n4. Upload high-resolution dish photos (stored via ImgBB CDN).\n5. Click **Publish** to share your recipe with the world!"
     },
     {
       "id": "account_and_login",
-      "category": "Account & Login FAQs",
-      "keywords": ["login", "signup", "register", "account", "profile", "password", "google login", "betterauth", "session"],
-      "phrases": ["how to sign up", "how to login", "forgot password", "google sign in", "edit profile"],
-      "response": "🔐 **Account & Authentication Guide**\n\n- **Sign Up / Registration:** Create a free account using your email & password or sign in with 1-click **Google OAuth**.\n- **Secure Sessions:** Secured via BetterAuth with JWT session tokens.\n- **Profile Management:** Update your bio, chef avatar, dietary preferences, and view your uploaded/purchased recipes from your **Dashboard**.\n- **Guest Access:** Guests can browse free recipes; log in to bookmark favorites and talk to Chef AI!"
+      "category": "Account, Login & Security",
+      "keywords": [
+        "login",
+        "signup",
+        "register",
+        "account",
+        "profile",
+        "password",
+        "google login",
+        "betterauth",
+        "session",
+        "how to sign up"
+      ],
+      "phrases": [
+        "how to sign up",
+        "how to login",
+        "forgot password",
+        "google sign in",
+        "edit profile",
+        "account security"
+      ],
+      "response": "🔐 **Account & Authentication FAQs**\n\n- **Sign Up / Login:** Create an account via email & password or sign in with 1-click **Google OAuth**.\n- **Security:** Secured using BetterAuth with encrypted JWT session tokens.\n- **Dashboard:** Manage your profile avatar, bio, uploaded recipes, and bookmarked favorites from your **Dashboard**.\n- **Guest Access:** Guests can search and view public recipes; log in to save favorites and unlock Chef AI guidance!"
+    },
+    {
+      "id": "support_and_contact",
+      "category": "Support, Terms & Contact",
+      "keywords": [
+        "contact",
+        "support",
+        "help",
+        "privacy policy",
+        "terms of service",
+        "feedback",
+        "customer service"
+      ],
+      "phrases": [
+        "how to contact support",
+        "where to get help",
+        "privacy policy",
+        "terms of service"
+      ],
+      "response": "📞 **Support & Legal Policies**\n\n- **Customer Support:** Have questions or feedback? Contact us via the **Contact Us** page.\n- **Terms & Privacy:** View our transparent **Terms of Service** and **Privacy Policy** links in the page footer.\n- **Community Guidelines:** Be respectful, share accurate culinary instructions, and credit original recipe sources!"
     }
   ]
 }

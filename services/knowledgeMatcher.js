@@ -34,6 +34,18 @@ const matchLocalKnowledge = (userQuery) => {
   // Strip trailing punctuation for exact matching
   const cleanQuery = userQuery.toLowerCase().replace(/[?.,!:]/g, "").trim();
 
+  // Guard: If user query is a specific culinary/baking/recipe request, bypass platform FAQs unless platform terms are present
+  const culinaryKeywords = ["cake", "chocolate", "bake", "cookie", "salmon", "chicken", "beef", "pasta", "salad", "soup", "substitute", "substitutes", "replacement", "texture", "fry", "roast", "grill"];
+  const platformScopeKeywords = ["recipehub", "recipe hub", "platform", "website", "app", "membership", "stripe", "account", "login", "signup", "dashboard", "upload", "creator"];
+
+  const hasCulinaryContext = culinaryKeywords.some((ck) => cleanQuery.includes(ck));
+  const hasPlatformContext = platformScopeKeywords.some((pk) => cleanQuery.includes(pk));
+
+  // If query is purely about specific cooking/baking and has no platform context, delegate to AI culinary engine
+  if (hasCulinaryContext && !hasPlatformContext) {
+    return { matched: false };
+  }
+
   // 1. Direct Phrase Match Check
   for (const intent of knowledgeData.intents) {
     if (Array.isArray(intent.phrases)) {
