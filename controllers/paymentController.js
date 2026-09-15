@@ -18,17 +18,67 @@ const getStripe = () => {
  */
 const createCheckoutSession = async (req, res, next) => {
   try {
-    const { recipeId, title, image, price, userEmail, email, userId } = req.body;
+    const { items, recipeId, title, image, price, userEmail, email, userId } = req.body;
 
+    const clientOrigin = process.env.CLIENT_URL || "http://localhost:3000";
+    const targetEmail = (userEmail || email || req.user?.email || "").trim().toLowerCase();
+
+    // Multi-item Cart Checkout
+    if (Array.isArray(items) && items.length > 0) {
+      const lineItems = items.map((item) => ({
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: item.recipeName || item.title || "Premium Recipe",
+            images: item.image ? [item.image] : [],
+          },
+          unit_amount: Math.round(Number(item.price || 5) * 100),
+        },
+        quantity: 1,
+      }));
+
+      const cartItemsPayload = items.map((item) => ({
+        recipeId: item._id || item.recipeId,
+        title: item.recipeName || item.title || "Premium Recipe",
+        price: Number(item.price || 5),
+        creatorEmail: (item.authorEmail || item.creatorEmail || "").toLowerCase(),
+      }));
+
+      const sessionConfig = {
+        payment_method_types: ["card"],
+        line_items: lineItems,
+        mode: "payment",
+        metadata: {
+          isCartCheckout: "true",
+          userEmail: targetEmail,
+          userId: userId || "N/A",
+          cartItemsJson: JSON.stringify(cartItemsPayload),
+        },
+        success_url: `${clientOrigin}/dashboard/purchased-recipes?session_id={CHECKOUT_SESSION_ID}&cart_cleared=true`,
+        cancel_url: `${clientOrigin}/browse-recipes`,
+      };
+
+      if (targetEmail) {
+        sessionConfig.customer_email = targetEmail;
+      }
+
+      const stripe = getStripe();
+      const session = await stripe.checkout.sessions.create(sessionConfig);
+
+      return res.send({
+        success: true,
+        id: session.id,
+        url: session.url,
+      });
+    }
+
+    // Single Item Checkout
     if (!title || price === undefined || price === null) {
       return res.status(400).send({
         success: false,
         message: "Missing title or price",
       });
     }
-
-    const clientOrigin = process.env.CLIENT_URL || "http://localhost:3000";
-    const targetEmail = (userEmail || email || req.user?.email || "").trim().toLowerCase();
 
     let finalTitle = title;
     let finalPrice = Number(price);
