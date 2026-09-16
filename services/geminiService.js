@@ -322,59 +322,161 @@ const generateAIContent = async (prompt, systemInstruction = "", userQuery = "")
 };
 
 const FREE_FOOD_IMAGES = {
+  Chicken: [
+    "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1588347818036-558601350947?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=1000&q=80"
+  ],
+  Pasta: [
+    "https://images.unsplash.com/photo-1621996346565-e3d5d6288596?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1546549032-9571cd6b27df?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&w=1000&q=80"
+  ],
+  Seafood: [
+    "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1574484284002-952d92456975?auto=format&fit=crop&w=1000&q=80"
+  ],
+  Meat: [
+    "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1603048588665-791ca8aea617?auto=format&fit=crop&w=1000&q=80"
+  ],
+  Salad: [
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?auto=format&fit=crop&w=1000&q=80"
+  ],
   Breakfast: [
     "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1000&q=80",
     "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=1000&q=80",
-    "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=1000&q=80"
+    "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=1000&q=80"
   ],
-  Lunch: [
-    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1000&q=80",
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1000&q=80",
-    "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1000&q=80"
-  ],
-  Dinner: [
-    "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1000&q=80",
-    "https://images.unsplash.com/photo-1621996346565-e3d5d6288596?auto=format&fit=crop&w=1000&q=80",
-    "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1000&q=80"
-  ],
-  Snack: [
-    "https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=1000&q=80",
-    "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=1000&q=80"
+  Soup: [
+    "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1588566565463-180a5b2090d2?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1603105037880-880cd4edfb5d?auto=format&fit=crop&w=1000&q=80"
   ],
   Dessert: [
+    "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=1000&q=80",
     "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=1000&q=80",
-    "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=1000&q=80"
+    "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=1000&q=80"
+  ],
+  PizzaBurger: [
+    "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1571091718767-18b5b1457add?auto=format&fit=crop&w=1000&q=80"
   ],
   Default: [
     "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1000&q=80",
-    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1000&q=80"
+    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&w=1000&q=80",
+    "https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=1000&q=80"
   ]
 };
 
 const getSmartFoodImage = (mealType = "Dinner", title = "") => {
   const lowerTitle = (title || "").toLowerCase();
-  
-  if (lowerTitle.includes("pasta") || lowerTitle.includes("noodle") || lowerTitle.includes("spaghetti") || lowerTitle.includes("alfredo")) {
-    return "https://images.unsplash.com/photo-1621996346565-e3d5d6288596?auto=format&fit=crop&w=1000&q=80";
+
+  // Deterministic Hash Function for Title Diversity
+  let hash = 0;
+  for (let i = 0; i < lowerTitle.length; i++) {
+    hash = (hash << 5) - hash + lowerTitle.charCodeAt(i);
+    hash |= 0;
   }
-  if (lowerTitle.includes("salad") || lowerTitle.includes("kale") || lowerTitle.includes("spinach")) {
-    return "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1000&q=80";
-  }
-  if (lowerTitle.includes("chicken") || lowerTitle.includes("steak") || lowerTitle.includes("beef") || lowerTitle.includes("meat")) {
-    return "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1000&q=80";
-  }
-  if (lowerTitle.includes("salmon") || lowerTitle.includes("fish") || lowerTitle.includes("tuna")) {
-    return "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1000&q=80";
-  }
-  if (lowerTitle.includes("cake") || lowerTitle.includes("chocolate") || lowerTitle.includes("sweet") || lowerTitle.includes("pancake")) {
-    return "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=1000&q=80";
-  }
-  if (lowerTitle.includes("potato") || lowerTitle.includes("bowl")) {
-    return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1000&q=80";
+  const positiveHash = Math.abs(hash);
+
+  let pool = FREE_FOOD_IMAGES.Default;
+
+  if (lowerTitle.includes("chicken") || lowerTitle.includes("poultry") || lowerTitle.includes("turkey")) {
+    pool = FREE_FOOD_IMAGES.Chicken;
+  } else if (
+    lowerTitle.includes("pasta") ||
+    lowerTitle.includes("noodle") ||
+    lowerTitle.includes("spaghetti") ||
+    lowerTitle.includes("alfredo") ||
+    lowerTitle.includes("macaroni") ||
+    lowerTitle.includes("penne") ||
+    lowerTitle.includes("lasagna")
+  ) {
+    pool = FREE_FOOD_IMAGES.Pasta;
+  } else if (
+    lowerTitle.includes("salmon") ||
+    lowerTitle.includes("fish") ||
+    lowerTitle.includes("tuna") ||
+    lowerTitle.includes("shrimp") ||
+    lowerTitle.includes("prawn") ||
+    lowerTitle.includes("seafood")
+  ) {
+    pool = FREE_FOOD_IMAGES.Seafood;
+  } else if (
+    lowerTitle.includes("steak") ||
+    lowerTitle.includes("beef") ||
+    lowerTitle.includes("pork") ||
+    lowerTitle.includes("lamb") ||
+    lowerTitle.includes("meat") ||
+    lowerTitle.includes("rib")
+  ) {
+    pool = FREE_FOOD_IMAGES.Meat;
+  } else if (
+    lowerTitle.includes("salad") ||
+    lowerTitle.includes("kale") ||
+    lowerTitle.includes("spinach") ||
+    lowerTitle.includes("avocado") ||
+    lowerTitle.includes("veggie") ||
+    lowerTitle.includes("greens")
+  ) {
+    pool = FREE_FOOD_IMAGES.Salad;
+  } else if (
+    lowerTitle.includes("soup") ||
+    lowerTitle.includes("stew") ||
+    lowerTitle.includes("broth") ||
+    lowerTitle.includes("chowder") ||
+    lowerTitle.includes("ramen")
+  ) {
+    pool = FREE_FOOD_IMAGES.Soup;
+  } else if (
+    lowerTitle.includes("cake") ||
+    lowerTitle.includes("chocolate") ||
+    lowerTitle.includes("sweet") ||
+    lowerTitle.includes("pie") ||
+    lowerTitle.includes("cookie") ||
+    lowerTitle.includes("dessert") ||
+    lowerTitle.includes("pudding")
+  ) {
+    pool = FREE_FOOD_IMAGES.Dessert;
+  } else if (
+    lowerTitle.includes("pizza") ||
+    lowerTitle.includes("burger") ||
+    lowerTitle.includes("sandwich") ||
+    lowerTitle.includes("taco") ||
+    lowerTitle.includes("wrap")
+  ) {
+    pool = FREE_FOOD_IMAGES.PizzaBurger;
+  } else if (
+    lowerTitle.includes("pancake") ||
+    lowerTitle.includes("egg") ||
+    lowerTitle.includes("omelet") ||
+    lowerTitle.includes("toast") ||
+    lowerTitle.includes("waffle") ||
+    lowerTitle.includes("breakfast")
+  ) {
+    pool = FREE_FOOD_IMAGES.Breakfast;
+  } else if (FREE_FOOD_IMAGES[mealType]) {
+    pool = FREE_FOOD_IMAGES[mealType];
   }
 
-  const pool = FREE_FOOD_IMAGES[mealType] || FREE_FOOD_IMAGES.Default;
-  const index = Math.abs(lowerTitle.length % pool.length);
+  const index = positiveHash % pool.length;
   return pool[index];
 };
 
@@ -382,14 +484,26 @@ const getSmartFoodImage = (mealType = "Dinner", title = "") => {
  * AI Smart Recipe Generator for Premium Users
  * Creates a structured custom recipe object from user inputs.
  */
-const generateAIRecipe = async ({ ingredients, dietaryPreference = "None", mealType = "Dinner", servings = 2 }) => {
-  const ingList = Array.isArray(ingredients) ? ingredients.join(", ") : (ingredients || "mixed ingredients");
-  
-  const systemPrompt = `You are Chef RecipeHub, an elite master chef. Create a gourmet, highly detailed, step-by-step recipe based on the provided inputs.
+const generateAIRecipe = async ({
+  ingredients,
+  dietaryPreference = "None",
+  mealType = "Dinner",
+  servings = 2,
+  recipeIdea = "",
+}) => {
+  const ingList = Array.isArray(ingredients) ? ingredients.join(", ") : ingredients || "mixed ingredients";
+
+  const systemPrompt = `You are Chef RecipeHub, an elite Michelin-star culinary master. Create a gourmet, highly detailed, step-by-step recipe based on the provided inputs.
+
+CRITICAL TITLE REQUIREMENTS:
+1. The "title" MUST be a unique, creative, mouth-watering gourmet dish name (e.g., "Pan-Seared Tuscan Garlic Butter Chicken", "Velvety Wild Mushroom Risotto", "Crispy Creamy Honey-Glazed Salmon Bowl").
+2. NEVER use generic or repetitive titles like "Chef's Special", "Simple Chicken Dish", "Quick Dinner", or plain ingredient names.
+3. If a specific dish idea or title ("recipeIdea") is provided, elevate that exact concept into a full, elegant gourmet title.
+
 Respond ONLY with a valid JSON object matching this schema:
 {
-  "title": "Recipe Title",
-  "description": "Short appetizing description",
+  "title": "Unique Gourmet Recipe Title",
+  "description": "Short appetizing culinary description (2-3 sentences)",
   "prepTime": "15 mins",
   "cookTime": "20 mins",
   "servings": ${servings},
@@ -409,7 +523,12 @@ Respond ONLY with a valid JSON object matching this schema:
   }
 }`;
 
-  const userPrompt = `Generate a ${dietaryPreference !== "None" ? dietaryPreference + " " : ""}${mealType} recipe using these key ingredients: ${ingList}. Ensure servings count is ${servings}.`;
+  let userPrompt = "";
+  if (recipeIdea && recipeIdea.trim()) {
+    userPrompt = `Generate a gourmet ${dietaryPreference !== "None" ? dietaryPreference + " " : ""}${mealType} recipe specifically for target dish: "${recipeIdea.trim()}" incorporating these available ingredients: ${ingList}. Target servings count is ${servings}.`;
+  } else {
+    userPrompt = `Generate a unique, gourmet ${dietaryPreference !== "None" ? dietaryPreference + " " : ""}${mealType} recipe featuring these key ingredients: ${ingList}. Target servings count is ${servings}.`;
+  }
 
   const apiKeys = getGeminiApiKeys();
 
@@ -428,7 +547,7 @@ Respond ONLY with a valid JSON object matching this schema:
             contents: [{ role: "user", parts: [{ text: userPrompt }] }],
             systemInstruction: { parts: [{ text: systemPrompt }] },
             generationConfig: {
-              temperature: 0.7,
+              temperature: 0.8,
               responseMimeType: "application/json",
               maxOutputTokens: 1200,
             },
@@ -466,10 +585,19 @@ Respond ONLY with a valid JSON object matching this schema:
   }
 
   // Smart Gourmet Recipe Generator Fallback
-  const mainIng = ingList.split(",")[0]?.trim() || "Seasonal Ingredient";
-  const capitalMain = mainIng.charAt(0).toUpperCase() + mainIng.slice(1);
-  const dietLabel = dietaryPreference !== "None" && dietaryPreference ? dietaryPreference : "Gourmet";
-  const fallbackTitle = `Chef's ${dietLabel} ${capitalMain} Special`;
+  let fallbackTitle = "";
+  if (recipeIdea && recipeIdea.trim()) {
+    const cleanIdea = recipeIdea.trim();
+    fallbackTitle = cleanIdea.charAt(0).toUpperCase() + cleanIdea.slice(1);
+  } else {
+    const mainIng = ingList.split(",")[0]?.trim() || "Herbs & Vegetables";
+    const capitalMain = mainIng.charAt(0).toUpperCase() + mainIng.slice(1);
+    const prefixes = ["Tuscan-Style", "Pan-Seared", "Crispy Roasted", "Garlic Butter Infused", "Creamy Artisanal", "Flame-Grilled"];
+    const prefix = prefixes[Math.abs(ingList.length % prefixes.length)];
+    const dietLabel = dietaryPreference !== "None" && dietaryPreference ? dietaryPreference : "Gourmet";
+    fallbackTitle = `${prefix} ${dietLabel} ${capitalMain} Delicacy`;
+  }
+
   const matchedImg = getSmartFoodImage(mealType, fallbackTitle);
 
   return {
@@ -481,7 +609,7 @@ Respond ONLY with a valid JSON object matching this schema:
     difficulty: "Easy",
     image: matchedImg,
     recipeImage: matchedImg,
-    dietaryTags: [dietLabel, mealType, "Chef Signature"],
+    dietaryTags: [dietaryPreference !== "None" ? dietaryPreference : "Gourmet", mealType, "Chef Signature"],
     ingredients: ingList.split(",").map((item) => `1 portion of ${item.trim()}`).concat([
       "2 tbsp extra virgin olive oil or butter",
       "2 cloves garlic, minced",

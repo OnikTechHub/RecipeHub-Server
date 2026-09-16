@@ -162,7 +162,8 @@ const getAIUsageStatus = async (req, res, next) => {
  */
 const handleGenerateRecipe = async (req, res, next) => {
   try {
-    const { ingredients, dietaryPreference, mealType, servings, userEmail, email } = req.body;
+    const { ingredients, dietaryPreference, mealType, servings, recipeIdea, userEmail, email } = req.body;
+
 
     // Verify Premium Access
     const targetEmail = (userEmail || email || req.user?.email || "").trim().toLowerCase();
@@ -222,7 +223,9 @@ const handleGenerateRecipe = async (req, res, next) => {
       dietaryPreference,
       mealType,
       servings: servings || 2,
+      recipeIdea,
     });
+
 
     const { usageCount, resetAt } = await getAIWeeklyCountFromDB(targetEmail);
     const remaining = isAdmin ? 999 : Math.max(0, 2 - usageCount);
