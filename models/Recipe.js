@@ -50,6 +50,18 @@ const recipeSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    ratings: {
+      type: Number,
+      default: 5.0,
+    },
+    reviewCount: {
+      type: Number,
+      default: 0,
+    },
+    reviews: {
+      type: Array,
+      default: [],
+    },
     isFeatured: {
       type: Boolean,
       default: false,

@@ -573,11 +573,13 @@ const addRecipeReview = async (req, res, next) => {
     }
 
     const newReview = {
+      _id: new mongoose.Types.ObjectId(),
       userName: userName || userEmail.split("@")[0],
       userEmail: userEmail.trim().toLowerCase(),
       userImage: userImage || "",
       rating: numRating,
       comment: comment.trim(),
+      isFeatured: false,
       createdAt: new Date(),
     };
 
@@ -595,11 +597,16 @@ const addRecipeReview = async (req, res, next) => {
     const totalStars = existingReviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0);
     const avgRating = Number((totalStars / existingReviews.length).toFixed(1));
 
-    recipe.reviews = existingReviews;
-    recipe.ratings = avgRating;
-    recipe.reviewCount = existingReviews.length;
-
-    await recipe.save();
+    await Recipe.updateOne(
+      { _id: id },
+      {
+        $set: {
+          reviews: existingReviews,
+          ratings: avgRating,
+          reviewCount: existingReviews.length,
+        },
+      }
+    );
 
     res.send({
       success: true,
