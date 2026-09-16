@@ -305,9 +305,12 @@ const getUserPurchasedRecipeIds = async (req, res, next) => {
       return res.send({ success: true, purchasedRecipeIds: [] });
     }
     const cleanEmail = email.trim().toLowerCase();
+    const escapeRegex = (str) => str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+    const emailRegex = new RegExp("^" + escapeRegex(cleanEmail) + "$", "i");
+
     const payments = await Payment.find({
-      userEmail: { $regex: new RegExp("^" + cleanEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") },
-      paymentStatus: "paid",
+      userEmail: emailRegex,
+      paymentStatus: { $ne: "failed" },
     }).select("recipeId items").lean();
 
     const purchasedSet = new Set();
@@ -319,6 +322,19 @@ const getUserPurchasedRecipeIds = async (req, res, next) => {
           if (item._id) purchasedSet.add(item._id.toString());
         });
       }
+    });
+
+    // Also include user authored / created recipe IDs
+    const userAuthored = await Recipe.find({
+      $or: [
+        { authorEmail: emailRegex },
+        { userEmail: emailRegex },
+        { email: emailRegex },
+      ],
+    }).select("_id").lean();
+
+    userAuthored.forEach((r) => {
+      if (r && r._id) purchasedSet.add(r._id.toString());
     });
 
     res.send({

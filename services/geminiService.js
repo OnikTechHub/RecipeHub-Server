@@ -490,24 +490,31 @@ const generateAIRecipe = async ({
   mealType = "Dinner",
   servings = 2,
   recipeIdea = "",
+  cuisine = "Italian",
+  prepTime = "20 mins",
+  difficulty = "Easy",
 }) => {
   const ingList = Array.isArray(ingredients) ? ingredients.join(", ") : ingredients || "mixed ingredients";
 
   const systemPrompt = `You are Chef RecipeHub, an elite Michelin-star culinary master. Create a gourmet, highly detailed, step-by-step recipe based on the provided inputs.
 
-CRITICAL TITLE REQUIREMENTS:
+CRITICAL TITLE & PARAMETER REQUIREMENTS:
 1. The "title" MUST be a unique, creative, mouth-watering gourmet dish name (e.g., "Pan-Seared Tuscan Garlic Butter Chicken", "Velvety Wild Mushroom Risotto", "Crispy Creamy Honey-Glazed Salmon Bowl").
 2. NEVER use generic or repetitive titles like "Chef's Special", "Simple Chicken Dish", "Quick Dinner", or plain ingredient names.
 3. If a specific dish idea or title ("recipeIdea") is provided, elevate that exact concept into a full, elegant gourmet title.
+4. Strictly incorporate the requested Cuisine (${cuisine}), Preparation Time (${prepTime}), and Difficulty Level (${difficulty}).
 
 Respond ONLY with a valid JSON object matching this schema:
 {
   "title": "Unique Gourmet Recipe Title",
   "description": "Short appetizing culinary description (2-3 sentences)",
-  "prepTime": "15 mins",
+  "cuisine": "${cuisine}",
+  "prepTime": "${prepTime}",
+  "preparationTime": "${prepTime}",
   "cookTime": "20 mins",
   "servings": ${servings},
-  "difficulty": "Easy",
+  "difficulty": "${difficulty}",
+  "difficultyLevel": "${difficulty}",
   "dietaryTags": ["Tag1", "Tag2"],
   "ingredients": ["1 cup ingredient 1", "2 tbsp ingredient 2"],
   "instructions": [
@@ -525,9 +532,9 @@ Respond ONLY with a valid JSON object matching this schema:
 
   let userPrompt = "";
   if (recipeIdea && recipeIdea.trim()) {
-    userPrompt = `Generate a gourmet ${dietaryPreference !== "None" ? dietaryPreference + " " : ""}${mealType} recipe specifically for target dish: "${recipeIdea.trim()}" incorporating these available ingredients: ${ingList}. Target servings count is ${servings}.`;
+    userPrompt = `Generate an authentic ${cuisine ? cuisine + " " : ""}${dietaryPreference !== "None" ? dietaryPreference + " " : ""}${mealType} recipe specifically for target dish: "${recipeIdea.trim()}" incorporating these available ingredients: ${ingList}. Target preparation time is ${prepTime}, difficulty is ${difficulty}, and target servings count is ${servings}.`;
   } else {
-    userPrompt = `Generate a unique, gourmet ${dietaryPreference !== "None" ? dietaryPreference + " " : ""}${mealType} recipe featuring these key ingredients: ${ingList}. Target servings count is ${servings}.`;
+    userPrompt = `Generate a unique, gourmet ${cuisine ? cuisine + " " : ""}${dietaryPreference !== "None" ? dietaryPreference + " " : ""}${mealType} recipe featuring these key ingredients: ${ingList}. Target preparation time is ${prepTime}, difficulty is ${difficulty}, and target servings count is ${servings}.`;
   }
 
   const apiKeys = getGeminiApiKeys();
@@ -571,6 +578,12 @@ Respond ONLY with a valid JSON object matching this schema:
               const matchedImg = getSmartFoodImage(mealType, recipeObj.title);
               recipeObj.image = recipeObj.image || matchedImg;
               recipeObj.recipeImage = recipeObj.recipeImage || matchedImg;
+              recipeObj.cuisine = recipeObj.cuisine || cuisine;
+              recipeObj.cuisineType = recipeObj.cuisine || cuisine;
+              recipeObj.prepTime = recipeObj.prepTime || prepTime;
+              recipeObj.preparationTime = recipeObj.preparationTime || recipeObj.prepTime || prepTime;
+              recipeObj.difficulty = recipeObj.difficulty || difficulty;
+              recipeObj.difficultyLevel = recipeObj.difficultyLevel || recipeObj.difficulty || difficulty;
 
               return recipeObj;
             } catch (jsonErr) {
@@ -595,21 +608,25 @@ Respond ONLY with a valid JSON object matching this schema:
     const prefixes = ["Tuscan-Style", "Pan-Seared", "Crispy Roasted", "Garlic Butter Infused", "Creamy Artisanal", "Flame-Grilled"];
     const prefix = prefixes[Math.abs(ingList.length % prefixes.length)];
     const dietLabel = dietaryPreference !== "None" && dietaryPreference ? dietaryPreference : "Gourmet";
-    fallbackTitle = `${prefix} ${dietLabel} ${capitalMain} Delicacy`;
+    fallbackTitle = `${prefix} ${cuisine ? cuisine + " " : ""}${dietLabel} ${capitalMain} Delicacy`;
   }
 
   const matchedImg = getSmartFoodImage(mealType, fallbackTitle);
 
   return {
     title: fallbackTitle,
-    description: `A delicious, chef-crafted ${mealType.toLowerCase()} dish featuring ${ingList} with harmonized spices and a rich, savory finish.`,
-    prepTime: "12 mins",
+    description: `A delicious, chef-crafted ${cuisine ? cuisine + " " : ""}${mealType.toLowerCase()} dish featuring ${ingList} with harmonized spices and a rich, savory finish.`,
+    cuisine: cuisine || "Gourmet",
+    cuisineType: cuisine || "Gourmet",
+    prepTime: prepTime || "20 mins",
+    preparationTime: prepTime || "20 mins",
     cookTime: "18 mins",
     servings: Number(servings) || 2,
-    difficulty: "Easy",
+    difficulty: difficulty || "Easy",
+    difficultyLevel: difficulty || "Easy",
     image: matchedImg,
     recipeImage: matchedImg,
-    dietaryTags: [dietaryPreference !== "None" ? dietaryPreference : "Gourmet", mealType, "Chef Signature"],
+    dietaryTags: [cuisine || "Gourmet", dietaryPreference !== "None" ? dietaryPreference : "Gourmet", mealType],
     ingredients: ingList.split(",").map((item) => `1 portion of ${item.trim()}`).concat([
       "2 tbsp extra virgin olive oil or butter",
       "2 cloves garlic, minced",

@@ -14,39 +14,49 @@ const Payment = require("../models/Payment");
 const getAllRecipes = async (req, res, next) => {
   try {
     const { search, category, filter = "all", email, page = 1, limit = 6 } = req.query;
-    let query = {};
+    const andConditions = [];
 
+    // 1. Search Query Filter
     if (search && search.trim()) {
-      query.recipeName = { $regex: search.trim(), $options: "i" };
+      andConditions.push({ recipeName: { $regex: search.trim(), $options: "i" } });
     }
+
+    // 2. Category Filter
     if (category && category !== "All") {
       const catTrim = category.trim();
       const baseCat = catTrim.replace(/s$/i, "");
       const catRegex = new RegExp("^" + baseCat + "s?$", "i");
 
-      query.$or = [
-        { category: { $in: [catTrim, baseCat, `${baseCat}s`, catRegex] } },
-        { category: catRegex },
-        { cuisine: catRegex },
-      ];
+      andConditions.push({
+        $or: [
+          { category: { $in: [catTrim, baseCat, `${baseCat}s`, catRegex] } },
+          { category: catRegex },
+          { cuisine: catRegex },
+        ],
+      });
     }
 
+    // 3. Access & Pricing Filter (Free, Paid, Purchased)
     const cleanFilter = (filter || "all").toLowerCase().trim();
 
     if (cleanFilter === "free") {
-      query.$or = [
-        { recipeType: "Free" },
-        { isPaid: false },
-        { isPaid: { $exists: false } },
-        { price: 0 },
-        { price: { $exists: false } },
-      ];
+      andConditions.push({
+        $or: [
+          { recipeType: "Free" },
+          { isPaid: false },
+          { isPaid: { $exists: false } },
+          { price: 0 },
+          { price: { $exists: false } },
+        ],
+      });
     } else if (cleanFilter === "paid") {
-      query.$or = [
-        { recipeType: "Paid" },
-        { isPaid: true },
-        { price: { $gt: 0 } },
-      ];
+      andConditions.push({
+        $or: [
+          { recipeType: "Paid" },
+          { isPaid: true },
+          { price: { $gt: 0 } },
+        ],
+      });
     } else if (cleanFilter === "purchased") {
       if (!email || !email.trim()) {
         return res.send({
@@ -66,15 +76,20 @@ const getAllRecipes = async (req, res, next) => {
         (userDoc && userDoc.role === "admin");
 
       if (isAdminUser) {
-        query.$or = [
-          { recipeType: "Paid" },
-          { isPaid: true },
-          { price: { $gt: 0 } },
-        ];
+        andConditions.push({
+          $or: [
+            { recipeType: "Paid" },
+            { isPaid: true },
+            { price: { $gt: 0 } },
+          ],
+        });
       } else {
+        const escapeRegex = (str) => str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        const emailRegex = new RegExp("^" + escapeRegex(normalizedEmail) + "$", "i");
+
         const payments = await Payment.find({
-          userEmail: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") },
-          paymentStatus: "paid",
+          userEmail: emailRegex,
+          paymentStatus: { $ne: "failed" },
         }).select("recipeId items").lean();
 
         const purchasedIds = [];
@@ -83,18 +98,41 @@ const getAllRecipes = async (req, res, next) => {
           if (Array.isArray(p.items)) {
             p.items.forEach((item) => {
               if (item.recipeId) purchasedIds.push(item.recipeId.toString());
+              if (item._id) purchasedIds.push(item._id.toString());
             });
           }
         });
 
-        query.$or = [
-          { authorEmail: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") } },
-          { userEmail: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") } },
-          { email: { $regex: new RegExp("^" + normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + "$", "i") } },
-          { _id: { $in: purchasedIds } },
-        ];
+        // Also query recipes authored by the user
+        const userAuthored = await Recipe.find({
+          $or: [
+            { authorEmail: emailRegex },
+            { userEmail: emailRegex },
+            { email: emailRegex },
+          ],
+        }).select("_id").lean();
+
+        userAuthored.forEach((r) => {
+          if (r && r._id) purchasedIds.push(r._id.toString());
+        });
+
+        const uniquePurchasedObjectIds = Array.from(new Set(purchasedIds))
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+          .map((id) => new mongoose.Types.ObjectId(id));
+
+        andConditions.push({
+          $or: [
+            { authorEmail: emailRegex },
+            { userEmail: emailRegex },
+            { email: emailRegex },
+            { _id: { $in: uniquePurchasedObjectIds } },
+          ],
+        });
+
       }
     }
+
+    const query = andConditions.length > 0 ? { $and: andConditions } : {};
 
     const totalRecipes = await Recipe.countDocuments(query);
     const pageNum = Math.max(1, parseInt(page) || 1);
