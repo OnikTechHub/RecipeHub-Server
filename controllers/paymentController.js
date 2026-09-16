@@ -26,6 +26,24 @@ const getStripe = () => {
   return require("stripe")(stripeKey);
 };
 
+const getClientOrigin = (req) => {
+  const reqOrigin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null);
+  if (reqOrigin && !reqOrigin.includes("localhost") && !reqOrigin.includes("127.0.0.1")) {
+    return reqOrigin.replace(/\/+$/, "");
+  }
+  const envClientUrl = process.env.CLIENT_URL;
+  if (envClientUrl && envClientUrl.trim() && !envClientUrl.includes("localhost") && !envClientUrl.includes("127.0.0.1")) {
+    return envClientUrl.trim().replace(/\/+$/, "");
+  }
+  if (process.env.VERCEL_URL) {
+    return "https://recipe-hub-web-omega.vercel.app";
+  }
+  if (process.env.NODE_ENV === "production") {
+    return "https://recipe-hub-web-omega.vercel.app";
+  }
+  return envClientUrl || "http://localhost:3000";
+};
+
 /**
  * Create Stripe Checkout Session
  * Route: POST /create-checkout-session
@@ -34,7 +52,7 @@ const createCheckoutSession = async (req, res, next) => {
   try {
     const { items, recipeId, title, image, price, userEmail, email, userId } = req.body;
 
-    const clientOrigin = process.env.CLIENT_URL || "http://localhost:3000";
+    const clientOrigin = getClientOrigin(req);
     const targetEmail = (userEmail || email || req.user?.email || "").trim().toLowerCase();
 
     // Block purchase for Admin users (Admins have lifetime free access to all recipes)
