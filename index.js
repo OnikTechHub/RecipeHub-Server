@@ -43,6 +43,7 @@ app.use(
       if (
         allowedOrigins.includes(origin) ||
         /\.vercel\.app$/.test(origin) ||
+        /\.onrender\.com$/.test(origin) ||
         /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/.test(origin)
       ) {
         return callback(null, true);
@@ -72,9 +73,14 @@ app.use(cookieParser());
 // General API Rate Limiter
 app.use(generalRateLimiter);
 
-// Server health check route
-app.get("/", (req, res) => {
-  res.send("RecipeHub Production Server is Online!");
+// Server health check routes (for Render / Vercel health monitoring)
+app.get(["/", "/health"], (req, res) => {
+  res.status(200).json({
+    status: "online",
+    service: "RecipeHub Backend API",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Mount domain API routes

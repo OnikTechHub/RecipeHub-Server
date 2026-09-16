@@ -5,9 +5,9 @@ const mongoose = require("mongoose");
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const connectDB = async () => {
-  const mongoUri = process.env.MONGO_DB_URI;
+  const mongoUri = process.env.MONGO_DB_URI || process.env.MONGO_DB_URL;
   if (!mongoUri) {
-    throw new Error("MONGO_DB_URI is missing in environment variables (.env)");
+    throw new Error("MONGO_DB_URI / MONGO_DB_URL is missing in environment variables (.env)");
   }
 
   try {
