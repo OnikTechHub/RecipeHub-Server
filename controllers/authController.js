@@ -10,21 +10,30 @@ const {
   sendLoginSuccessEmail,
 } = require("../services/emailService");
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
  * Generate and send 6-digit registration OTP strictly to user's real email
  * Route: POST /api/auth/send-registration-otp
  */
 const sendRegistrationOtp = async (req, res, next) => {
-  const { email, name } = req.body;
+  const { email, name } = req.body || {};
 
-  if (!email) {
+  if (!email || typeof email !== "string" || !email.trim()) {
     return res.status(400).json({
       success: false,
-      message: "Email address is required",
+      message: "A valid email address is required.",
     });
   }
 
   const cleanEmail = email.trim().toLowerCase();
+
+  if (!EMAIL_REGEX.test(cleanEmail)) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide a valid email address.",
+    });
+  }
 
   try {
     // 1. Strict Duplicate Email Validation: Check if email is already registered
@@ -37,7 +46,21 @@ const sendRegistrationOtp = async (req, res, next) => {
       });
     }
 
-    // 2. Email is unique: Generate cryptographically secure 6-digit OTP
+    // 2. Cooldown check: Prevent spamming OTP generation within 60 seconds
+    const recentOtp = await Otp.findOne({
+      email: cleanEmail,
+      type: "registration",
+      createdAt: { $gte: new Date(Date.now() - 60 * 1000) },
+    });
+
+    if (recentOtp) {
+      return res.status(429).json({
+        success: false,
+        message: "Please wait 60 seconds before requesting a new verification code.",
+      });
+    }
+
+    // 3. Generate cryptographically secure 6-digit OTP
     const otp = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
 
@@ -49,6 +72,7 @@ const sendRegistrationOtp = async (req, res, next) => {
       email: cleanEmail,
       otp,
       type: "registration",
+      attempts: 0,
       expiresAt,
     });
 
@@ -65,7 +89,7 @@ const sendRegistrationOtp = async (req, res, next) => {
     console.error("Registration email dispatch error:", error.message);
     return res.status(500).json({
       success: false,
-      message: error.message.includes("SMTP")
+      message: error.message && error.message.includes("SMTP")
         ? error.message
         : "Failed to deliver verification code to your email. Please check your SMTP configuration.",
     });
@@ -78,21 +102,21 @@ const sendRegistrationOtp = async (req, res, next) => {
  */
 const verifyRegistrationOtp = async (req, res, next) => {
   try {
-    const { email, otp } = req.body;
+    const { email, otp } = req.body || {};
 
     if (!email || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Email and OTP code are required",
+        message: "Email and OTP code are required.",
       });
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanOtp = otp.trim();
+    const cleanOtp = otp.toString().trim();
 
+    // Check for active OTP within validity window
     const otpRecord = await Otp.findOne({
       email: cleanEmail,
-      otp: cleanOtp,
       type: "registration",
       expiresAt: { $gt: new Date() },
     });
@@ -104,25 +128,28 @@ const verifyRegistrationOtp = async (req, res, next) => {
       });
     }
 
+    // Brute force protection: max 5 failed attempts
+    if (otpRecord.attempts >= 5) {
+      await Otp.deleteOne({ _id: otpRecord._id });
+      return res.status(429).json({
+        success: false,
+        message: "Too many incorrect attempts. This code has been invalidated. Please request a new one.",
+      });
+    }
+
+    if (otpRecord.otp !== cleanOtp) {
+      await Otp.updateOne({ _id: otpRecord._id }, { $inc: { attempts: 1 } });
+      const remainingAttempts = 4 - (otpRecord.attempts || 0);
+      return res.status(400).json({
+        success: false,
+        message: remainingAttempts > 0
+          ? `Invalid OTP code. ${remainingAttempts} attempt(s) remaining.`
+          : "Invalid OTP code. Code invalidated due to too many attempts.",
+      });
+    }
+
     // OTP is valid - consume/remove it so it cannot be reused
     await Otp.deleteOne({ _id: otpRecord._id });
-
-    // Clean up any stale duplicate records for this verified email so Better-Auth can insert the fresh user cleanly
-    if (mongoose.connection.db) {
-      const existingUser = await User.findByEmailWithFallback(cleanEmail);
-      if (existingUser) {
-        await mongoose.connection.db.collection("account").deleteMany({
-          $or: [
-            { userId: existingUser._id },
-            { userId: existingUser._id.toString() },
-            { accountId: cleanEmail },
-            { accountId: existingUser._id.toString() },
-          ],
-        });
-        await mongoose.connection.db.collection("user").deleteMany({ email: cleanEmail });
-        await mongoose.connection.db.collection("users").deleteMany({ email: cleanEmail });
-      }
-    }
 
     return res.status(200).json({
       success: true,
@@ -139,11 +166,11 @@ const verifyRegistrationOtp = async (req, res, next) => {
  */
 const sendLoginNotification = async (req, res, next) => {
   try {
-    const { email } = req.body;
-    if (!email) {
+    const { email } = req.body || {};
+    if (!email || !EMAIL_REGEX.test(email.trim().toLowerCase())) {
       return res.status(400).json({
         success: false,
-        message: "Email is required",
+        message: "Valid email is required.",
       });
     }
 
@@ -161,7 +188,7 @@ const sendLoginNotification = async (req, res, next) => {
     console.error("Login alert dispatch error:", error.message);
     return res.status(500).json({
       success: false,
-      message: error.message || "Failed to dispatch login alert email.",
+      message: "Failed to dispatch login alert email.",
     });
   }
 };
@@ -172,11 +199,11 @@ const sendLoginNotification = async (req, res, next) => {
  */
 const sendRegistrationSuccessNotification = async (req, res, next) => {
   try {
-    const { email, name } = req.body;
-    if (!email) {
+    const { email, name } = req.body || {};
+    if (!email || !EMAIL_REGEX.test(email.trim().toLowerCase())) {
       return res.status(400).json({
         success: false,
-        message: "Email is required",
+        message: "Valid email is required.",
       });
     }
 
@@ -194,7 +221,7 @@ const sendRegistrationSuccessNotification = async (req, res, next) => {
     console.error("Registration success email dispatch error:", error.message);
     return res.status(500).json({
       success: false,
-      message: error.message || "Failed to dispatch registration success email.",
+      message: "Failed to dispatch registration success email.",
     });
   }
 };
@@ -204,12 +231,12 @@ const sendRegistrationSuccessNotification = async (req, res, next) => {
  * Route: POST /api/auth/forgot-password
  */
 const forgotPassword = async (req, res, next) => {
-  const { email } = req.body;
+  const { email } = req.body || {};
 
-  if (!email) {
+  if (!email || !EMAIL_REGEX.test(email.trim().toLowerCase())) {
     return res.status(400).json({
       success: false,
-      message: "Email address is required",
+      message: "Valid email address is required.",
     });
   }
 
@@ -221,6 +248,20 @@ const forgotPassword = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: "No registered account found with this email address.",
+      });
+    }
+
+    // Cooldown check: 60 seconds
+    const recentOtp = await Otp.findOne({
+      email: cleanEmail,
+      type: "forgot_password",
+      createdAt: { $gte: new Date(Date.now() - 60 * 1000) },
+    });
+
+    if (recentOtp) {
+      return res.status(429).json({
+        success: false,
+        message: "Please wait 60 seconds before requesting another reset code.",
       });
     }
 
@@ -236,6 +277,7 @@ const forgotPassword = async (req, res, next) => {
       email: cleanEmail,
       otp,
       type: "forgot_password",
+      attempts: 0,
       expiresAt,
     });
 
@@ -251,7 +293,7 @@ const forgotPassword = async (req, res, next) => {
     console.error("Password reset email dispatch error:", error.message);
     return res.status(500).json({
       success: false,
-      message: error.message.includes("SMTP")
+      message: error.message && error.message.includes("SMTP")
         ? error.message
         : "Failed to deliver password reset code to your email. Please check your SMTP configuration.",
     });
@@ -264,7 +306,7 @@ const forgotPassword = async (req, res, next) => {
  */
 const resetPassword = async (req, res, next) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    const { email, otp, newPassword } = req.body || {};
 
     if (!email || !otp || !newPassword) {
       return res.status(400).json({
@@ -281,11 +323,10 @@ const resetPassword = async (req, res, next) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanOtp = otp.trim();
+    const cleanOtp = otp.toString().trim();
 
     const otpRecord = await Otp.findOne({
       email: cleanEmail,
-      otp: cleanOtp,
       type: "forgot_password",
       expiresAt: { $gt: new Date() },
     });
@@ -294,6 +335,25 @@ const resetPassword = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: "Invalid or expired reset code.",
+      });
+    }
+
+    if (otpRecord.attempts >= 5) {
+      await Otp.deleteOne({ _id: otpRecord._id });
+      return res.status(429).json({
+        success: false,
+        message: "Too many incorrect attempts. This reset code has been invalidated.",
+      });
+    }
+
+    if (otpRecord.otp !== cleanOtp) {
+      await Otp.updateOne({ _id: otpRecord._id }, { $inc: { attempts: 1 } });
+      const remaining = 4 - (otpRecord.attempts || 0);
+      return res.status(400).json({
+        success: false,
+        message: remaining > 0
+          ? `Invalid reset code. ${remaining} attempt(s) remaining.`
+          : "Invalid reset code. Code invalidated due to too many failed attempts.",
       });
     }
 
@@ -328,8 +388,7 @@ const resetPassword = async (req, res, next) => {
 
     // Update or link credential account in Better-Auth account collection
     const accountCollection = mongoose.connection.db.collection("account");
-    
-    // First check for an existing credential account
+
     let existingCredentialAccount = await accountCollection.findOne({
       $or: userQueryConditions,
       providerId: "credential",
@@ -346,7 +405,6 @@ const resetPassword = async (req, res, next) => {
         }
       );
     } else {
-      // If user signed up with Google OAuth or hasn't got a credential record yet, link one
       await accountCollection.insertOne({
         accountId: userIdStr,
         providerId: "credential",

@@ -653,6 +653,37 @@ const getRecipesCount = async (req, res, next) => {
 const deleteRecipe = async (req, res, next) => {
   try {
     const id = req.params.id;
+    const recipe = await Recipe.findById(id);
+
+    if (!recipe) {
+      return res.status(404).send({
+        success: false,
+        message: "Recipe not found!",
+      });
+    }
+
+    // Ownership or Admin Check
+    const requestingEmail = (
+      req.user?.email ||
+      req.headers["x-user-email"] ||
+      req.headers["x-admin-email"] ||
+      req.query?.email ||
+      req.body?.userEmail ||
+      req.body?.email ||
+      ""
+    ).trim().toLowerCase();
+
+    const adminEmail = (process.env.ADMIN_EMAIL || "admin@recipehub.com").trim().toLowerCase();
+    const isOwner = recipe.authorEmail && recipe.authorEmail.trim().toLowerCase() === requestingEmail;
+    const isAdmin = requestingEmail === adminEmail || req.user?.role === "admin";
+
+    if (requestingEmail && !isOwner && !isAdmin) {
+      return res.status(403).send({
+        success: false,
+        message: "Forbidden. You can only delete your own recipes.",
+      });
+    }
+
     const result = await Recipe.deleteOne({ _id: id });
 
     if (result.deletedCount === 1) {
@@ -673,12 +704,43 @@ const deleteRecipe = async (req, res, next) => {
 
 /**
  * Update user's recipe by ID
- * Route: PATCH /recipes/:id
+ * Route: PATCH /recipes/:id or PUT /recipes/:id
  */
 const updateRecipe = async (req, res, next) => {
   try {
     const id = req.params.id;
-    const updatedData = req.body;
+    const recipe = await Recipe.findById(id);
+
+    if (!recipe) {
+      return res.status(404).send({
+        success: false,
+        message: "Recipe not found!",
+      });
+    }
+
+    // Ownership or Admin Check
+    const requestingEmail = (
+      req.user?.email ||
+      req.headers["x-user-email"] ||
+      req.headers["x-admin-email"] ||
+      req.query?.email ||
+      req.body?.userEmail ||
+      req.body?.email ||
+      ""
+    ).trim().toLowerCase();
+
+    const adminEmail = (process.env.ADMIN_EMAIL || "admin@recipehub.com").trim().toLowerCase();
+    const isOwner = recipe.authorEmail && recipe.authorEmail.trim().toLowerCase() === requestingEmail;
+    const isAdmin = requestingEmail === adminEmail || req.user?.role === "admin";
+
+    if (requestingEmail && !isOwner && !isAdmin) {
+      return res.status(403).send({
+        success: false,
+        message: "Forbidden. You can only edit your own recipes.",
+      });
+    }
+
+    const updatedData = req.body || {};
     delete updatedData._id;
 
     if (updatedData.isPaid !== undefined) {

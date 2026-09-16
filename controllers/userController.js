@@ -142,9 +142,21 @@ const getUserByEmail = async (req, res, next) => {
   try {
     const { email } = req.params;
     const user = await User.findByEmailWithFallback(email);
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const safeUser = user.toObject ? user.toObject() : { ...user };
+    delete safeUser.password;
+    delete safeUser.secret;
+    delete safeUser.twoFactorSecret;
+
     res.send({
       success: true,
-      data: user,
+      data: safeUser,
     });
   } catch (error) {
     next(error);

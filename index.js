@@ -1,10 +1,20 @@
-require("dotenv").config(); // Reloaded with SMTP configurations
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
 const routes = require("./routes");
 const { errorHandler, notFoundHandler } = require("./middlewares/errorMiddleware");
+const { generalRateLimiter } = require("./middlewares/rateLimitMiddleware");
+
+// Global Process Exception & Rejection Handlers to prevent abrupt crashes
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("⚠️ Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("🔥 Uncaught Exception caught:", error);
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -45,6 +55,9 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// General API Rate Limiter
+app.use(generalRateLimiter);
 
 // Server health check route
 app.get("/", (req, res) => {

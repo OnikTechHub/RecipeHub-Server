@@ -116,7 +116,7 @@ const getUsers = async (req, res, next) => {
     let limitNum = parseInt(limit);
     const usePagination = !isNaN(pageNum) && !isNaN(limitNum) && limitNum > 0;
 
-    let query = User.find({}).sort({ createdAt: -1 });
+    let query = User.find({}).select("-password -secret -twoFactorSecret").sort({ createdAt: -1 });
     if (usePagination) {
       const skip = (pageNum - 1) * limitNum;
       query = query.skip(skip).limit(limitNum);
@@ -292,7 +292,7 @@ const getAdmins = async (req, res, next) => {
     let limitNum = parseInt(limit);
     const usePagination = !isNaN(pageNum) && !isNaN(limitNum) && limitNum > 0;
 
-    let query = User.find(filter).sort({ createdAt: -1 });
+    let query = User.find(filter).select("-password -secret -twoFactorSecret").sort({ createdAt: -1 });
     if (usePagination) {
       const skip = (pageNum - 1) * limitNum;
       query = query.skip(skip).limit(limitNum);

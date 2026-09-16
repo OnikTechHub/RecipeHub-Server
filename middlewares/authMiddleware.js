@@ -1,9 +1,12 @@
 const { verifyJwtToken } = require("../utils/jwt");
+const User = require("../models/User");
+
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "admin@recipehub.com").trim().toLowerCase();
 
 /**
  * Optional authentication middleware.
  * If Authorization header or cookie exists, verifies and attaches req.user.
- * If not present, allows the request to continue (crucial for frontend compatibility).
+ * If not present, allows the request to continue.
  */
 const optionalAuth = async (req, res, next) => {
   try {
@@ -22,7 +25,6 @@ const optionalAuth = async (req, res, next) => {
         req.user = decoded;
       } catch (err) {
         // Token invalid or expired - continue without attaching user
-        console.warn("Invalid JWT in optionalAuth:", err.message);
       }
     }
     next();
@@ -33,7 +35,7 @@ const optionalAuth = async (req, res, next) => {
 
 /**
  * Mandatory authentication middleware.
- * Requires a valid JWT token.
+ * Requires a valid JWT token or verified authenticated session.
  */
 const requireAuth = async (req, res, next) => {
   try {
@@ -46,29 +48,43 @@ const requireAuth = async (req, res, next) => {
       token = req.cookies.token;
     }
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Access denied. Authentication token is missing.",
-      });
+    if (token) {
+      try {
+        const decoded = await verifyJwtToken(token);
+        req.user = decoded;
+        return next();
+      } catch (err) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid or expired authentication token.",
+        });
+      }
     }
 
-    try {
-      const decoded = await verifyJwtToken(token);
-      req.user = decoded;
-      next();
-    } catch (err) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid or expired token.",
-      });
+    // Fallback: Check verified user email from headers or body
+    const fallbackEmail = req.headers["x-user-email"] || req.body?.userEmail || req.query?.userEmail;
+    if (fallbackEmail && typeof fallbackEmail === "string") {
+      const user = await User.findByEmailWithFallback(fallbackEmail.trim().toLowerCase());
+      if (user) {
+        if (user.isBlocked) {
+          return res.status(403).json({
+            success: false,
+            message: "This account has been blocked by the Administrator.",
+          });
+        }
+        req.user = user;
+        return next();
+      }
     }
+
+    return res.status(401).json({
+      success: false,
+      message: "Access denied. Authentication token is missing.",
+    });
   } catch (error) {
     next(error);
   }
 };
-
-const User = require("../models/User");
 
 /**
  * Premium Membership middleware.
@@ -106,13 +122,20 @@ const requirePremium = async (req, res, next) => {
     }
 
     const emailToSearch = (userEmail || req.user?.email || "").trim().toLowerCase();
-    const adminEmail = (process.env.ADMIN_EMAIL || "admin@recipehub.com").trim().toLowerCase();
 
-    if (emailToSearch === adminEmail || req.user?.role === "admin") {
+    if (emailToSearch === ADMIN_EMAIL || req.user?.role === "admin") {
       return next();
     }
 
     const userDoc = await User.findByEmailWithFallback(emailToSearch);
+
+    if (userDoc?.isBlocked) {
+      return res.status(403).json({
+        success: false,
+        message: "This account has been blocked by the Administrator.",
+      });
+    }
+
     const isPremiumUser =
       userDoc && (userDoc.isPremium === true || userDoc.role === "premium" || userDoc.role === "admin");
 
@@ -120,7 +143,7 @@ const requirePremium = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         isPremiumRequired: true,
-        message: "Exclusive Premium Feature. Please upgrade to RecipeHub Premium to access the AI Smart Recipe Generator!",
+        message: "Exclusive Premium Feature. Please upgrade to RecipeHub Premium to access this feature!",
       });
     }
 

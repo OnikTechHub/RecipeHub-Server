@@ -562,10 +562,38 @@ const paymentSuccessWebhook = async (req, res, next) => {
     const userEmail = session?.userEmail || session?.metadata?.userEmail;
     const transactionId = session?.id || session?.payment_intent;
 
-    if (!userEmail) {
+    if (!userEmail || !transactionId) {
       return res.status(400).json({
         success: false,
-        message: "Missing user email",
+        message: "Missing user email or transaction identifier.",
+      });
+    }
+
+    // Verify transaction authenticity with Stripe before upgrading account
+    try {
+      const stripe = getStripe();
+      if (typeof transactionId === "string" && transactionId.startsWith("cs_")) {
+        const stripeSession = await stripe.checkout.sessions.retrieve(transactionId);
+        if (stripeSession.payment_status !== "paid") {
+          return res.status(400).json({
+            success: false,
+            message: "Transaction has not been completed on Stripe.",
+          });
+        }
+      } else if (typeof transactionId === "string" && transactionId.startsWith("pi_")) {
+        const paymentIntent = await stripe.paymentIntents.retrieve(transactionId);
+        if (paymentIntent.status !== "succeeded") {
+          return res.status(400).json({
+            success: false,
+            message: "Payment intent has not succeeded.",
+          });
+        }
+      }
+    } catch (stripeErr) {
+      console.warn("Stripe verification check in webhook:", stripeErr.message);
+      return res.status(400).json({
+        success: false,
+        message: "Unable to verify transaction with Stripe.",
       });
     }
 
