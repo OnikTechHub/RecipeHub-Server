@@ -1,229 +1,238 @@
-# 🍲 RecipeHub - A Recipe Sharing Platform
+# ⚙️ RecipeHub - Backend Server API
 
-RecipeHub is a full-stack recipe-sharing platform where food enthusiasts can create, share, discover, and manage recipes. The platform provides a seamless community-driven experience along with premium features for advanced users.
+<div align="center">
+
+![RecipeHub Server Banner](https://img.shields.io/badge/RecipeHub-RESTful%20API%20Server-green?style=for-the-badge&logo=express)
+
+[![Node.js](https://img.shields.io/badge/Node.js-18.x-339933?style=for-the-badge&logo=node.js)](https://nodejs.org/)
+[![Express.js](https://img.shields.io/badge/Express.js-4.x-000000?style=for-the-badge&logo=express)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Database-47A248?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
+[![Google Gemini AI](https://img.shields.io/badge/Google_Gemini-AI_Engine-8E75B2?style=for-the-badge&logo=google)](https://deepmind.google/technologies/gemini/)
+[![Stripe API](https://img.shields.io/badge/Stripe-Payment_API-6772E5?style=for-the-badge&logo=stripe)](https://stripe.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+**RecipeHub Server** is the high-performance RESTful API backend powering the RecipeHub platform. Built on Node.js, Express, and MongoDB, it provides robust backend services for **Google Gemini AI Recipe Generation**, **Email OTP Verification**, **Stripe Subscription Checkout**, **Role-Based Access Control (RBAC)**, **Quota Enforcement**, and **Admin Analytics**.
+
+[🌐 Live Application](https://recipe-hub-client-two.vercel.app) • [⚙️ Backend Repository](https://github.com/OnikTechHub/RecipeHub-Server) • [💻 Frontend Repository](https://github.com/OnikTechHub/RecipeHub-Client)
+
+</div>
 
 ---
 
-## 🚀 Live Demo
+## 🌟 Core Backend Capabilities
 
-🔗 **Live Site:** https://recipe-hub-client-two.vercel.app
+### ⚡ 1. Google Gemini AI Engine
+* **Prompt Processing**: Transforms culinary prompts, available pantry items, and dietary constraints into structured JSON recipe objects.
+* **Intelligent Recipe Formatting**: Returns precise prep time, cook time, serving yields, difficulty rating, ingredient lists, step-by-step guides, and nutrition metrics.
 
-🔗 **Client Repository:** https://github.com/OnikTechHub/RecipeHub-Client
+### 🔒 2. Authentication & Email OTP Service
+* **Secure Registration**: Generates and emails 6-digit verification OTP codes via Nodemailer/SMTP prior to user account creation.
+* **OTP Lifecycle Management**: Automatic code expiry, retry limits, and duplicate email prevention.
+* **JWT Token Management**: Secure token issuing and HTTP-Only cookie authentication for session integrity.
 
+### 💳 3. Stripe Payment Integration
+* **PaymentIntent Engine**: Securely creates Stripe Payment Intents for purchasing Premium Membership.
+* **Subscription & Tier Upgrade**: Automatically upgrades user accounts to `premium` upon successful payment verification.
 
-🔗 **Server Repository:** https://github.com/OnikTechHub/RecipeHub-Server
+### 👮 4. Middleware & Quota Management
+* **Role-Based Access Control (RBAC)**: Custom Express middlewares (`verifyToken`, `verifyAdmin`, `verifyPremium`).
+* **Creation Quota Enforcement**: Limits free tier accounts to 3 recipe publications, prompting paywall upgrade upon reaching the quota.
 
----
+### 📈 5. Admin & Quota Analytics API
+* **Real-time Platform Metrics**: Endpoints delivering statistics on total users, active premium subscriptions, published recipes, reported content, and platform activity.
+* **Content Moderation**: API routes for reviewing, dismissing, or deleting reported recipes and managing user roles.
 
+### 🍽️ 6. Advanced MongoDB Aggregation Pipeline
+* **High-Performance Search & Filtering**: Multi-field regex search by title, category filtering, server-side pagination, and sorting (newest, most liked, most favorited).
+* **Social Engagement**: Atomic increment/decrement handlers for recipe likes, favorites bookmarking, and community reporting.
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Frontend
-
-* **Framework:** Next.js (App Router)
-* **Styling:** Tailwind CSS, DaisyUI, HeroUI
-* **State Management:** React Hooks, TanStack Query
-* **Animations:** Framer Motion
-* **Notifications:** React Hot Toast
-* **Animations:** Framer Motion
-* **Authentication:** Better Auth (Google & Credentials)
-* **Payments:** Stripe Checkout
-
-### Backend
-
-* **Runtime:** Node.js
-* **Framework:** Express.js
-* **Authentication:** JWT with HTTP-Only Cookies
-
-### Database & Services
-
-* **Database:** MongoDB
-* **Image Hosting:** ImgBB API
-* **Deployment:** Vercel (Frontend), (Backend)
+* **Runtime**: [Node.js](https://nodejs.org/) (v18.x+)
+* **Framework**: [Express.js](https://expressjs.com/)
+* **Database**: [MongoDB](https://www.mongodb.com/) & Mongoose / Native MongoDB Driver
+* **AI Integration**: [@google/generative-ai](https://www.npmjs.com/package/@google/generative-ai)
+* **Authentication**: [jsonwebtoken](https://www.npmjs.com/package/jsonwebtoken), `bcryptjs`, `cookie-parser`, `cors`
+* **Email Service**: [Nodemailer](https://nodemailer.com/) (SMTP Email Delivery)
+* **Payments**: [Stripe Node SDK](https://www.npmjs.com/package/stripe)
+* **Deployment**: [Vercel Serverless](https://vercel.com/) / Render
 
 ---
 
-## ✨ Features
+## 📁 Directory Structure
 
-### 🔐 Authentication & Security
-
-* JWT-based Authentication
-* HTTP-Only Cookie Protection
-* Google Sign-In
-* Email & Password Authentication
-* Protected Routes
-
-### 🍽️ Recipe Management
-
-* Create Recipes
-* View Recipe Details
-* Update Recipes
-* Delete Recipes
-* Rich Recipe Information
-
-### ⭐ Community Features
-
-* Like Recipes
-* Add Recipes to Favorites
-* Report Inappropriate Recipes
-* View Popular Recipes
-
-### 💎 Premium Membership
-
-* Stripe Payment Integration
-* Unlock Unlimited Recipe Publishing
-* Premium Badge for Subscribers
-
-### 🛡️ Admin Dashboard
-
-* Manage Users
-* Manage Recipes
-* Handle Reported Content
-* Role-Based Access Control (RBAC)
-
-### 🔍 Search & Filtering
-
-* Search Recipes by Title
-* Filter by Categories
-* MongoDB Aggregation Pipeline
-* Server-Side Pagination
-
-### 🎨 User Experience
-
-* Responsive Design
-* Dark / Light Theme Toggle
-* Smooth Framer Motion Animations
-* Fast Page Loading with Next.js
+```text
+recipe-hub-server/
+├── config/                     # Database & service configurations
+│   └── db.js                   # MongoDB connection logic
+├── controllers/                # Business logic controllers
+│   ├── adminController.js      # Admin stats & content management
+│   ├── aiController.js         # Google Gemini AI generation engine
+│   ├── authController.js       # OTP email dispatch & verification logic
+│   ├── paymentController.js    # Stripe payment intents & webhook handlers
+│   ├── recipeController.js     # Recipe CRUD, search, filter, like, report
+│   ├── testimonialController.js# Testimonials & community feedback
+│   └── userController.js       # User profile & role management
+├── middlewares/                # Custom Express middlewares
+│   ├── authMiddleware.js       # JWT token verification
+│   ├── checkQuotaMiddleware.js # Creation limit quota checker
+│   └── roleMiddleware.js       # Admin & Premium authorization checks
+├── models/                     # Database schemas / models
+│   ├── Otp.js                  # Temporary OTP verification store
+│   ├── Recipe.js               # Recipe document schema
+│   ├── Report.js               # Recipe reports schema
+│   ├── Testimonial.js          # User reviews schema
+│   └── User.js                 # User profile & tier schema
+├── routes/                     # API route declarations
+│   ├── adminRoutes.js          # Admin dashboard API endpoints
+│   ├── aiRoutes.js             # AI recipe generation endpoint
+│   ├── authRoutes.js           # OTP authentication routes
+│   ├── contactRoutes.js        # Public contact form submission route
+│   ├── favoriteRoutes.js       # User favorites management routes
+│   ├── paymentRoutes.js        # Stripe payment intent routes
+│   ├── recipeRoutes.js         # Recipe CRUD & social interactions
+│   ├── reportRoutes.js         # Recipe reporting endpoints
+│   ├── testimonialRoutes.js    # Public testimonials endpoints
+│   ├── userRoutes.js           # User management endpoints
+│   └── index.js                # Master API router
+├── services/                   # External service wrappers (Gemini, Email, Stripe)
+├── utils/                      # Helper utilities & response formatters
+├── .env.example                # Environment variables template
+├── index.js                    # Server entry point & Express app setup
+├── vercel.json                 # Vercel deployment configuration
+└── package.json                # Server dependencies & start scripts
+```
 
 ---
 
-## 💻 Installation & Setup
+## 📡 API Endpoint Reference
 
-### Clone the Repository
+### 🔐 Authentication & OTP
+| Method | Endpoint | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/send-registration-otp` | Sends a 6-digit verification code to user email | Public |
+| `POST` | `/api/auth/verify-registration-otp` | Validates submitted OTP code | Public |
 
-```bash
-git clone <https://github.com/OnikTechHub/RecipeHub-Client>
+### 🤖 AI Recipe Generation
+| Method | Endpoint | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/ai/generate-recipe` | Generates structured recipe via Google Gemini AI | Authenticated |
+
+### 🍽️ Recipe Operations
+| Method | Endpoint | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/recipes` | Fetch paginated recipes with search, category, and sorting | Public |
+| `GET` | `/api/recipes/:id` | Fetch single recipe details | Public |
+| `POST` | `/api/recipes` | Create & publish a new recipe (Quota Enforced) | Authenticated |
+| `PUT` | `/api/recipes/:id` | Update owned recipe | Owner / Admin |
+| `DELETE` | `/api/recipes/:id` | Delete recipe | Owner / Admin |
+| `PATCH` | `/api/recipes/:id/like` | Toggle like status on a recipe | Authenticated |
+| `POST` | `/api/recipes/:id/report` | Submit report for inappropriate content | Authenticated |
+
+### 💳 Payments & Premium Upgrade
+| Method | Endpoint | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/payments/create-payment-intent` | Creates Stripe Payment Intent for membership upgrade | Authenticated |
+
+### 🛡️ Admin & Analytics
+| Method | Endpoint | Description | Access |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/admin/analytics` | Fetch real-time system stats and usage metrics | Admin |
+| `GET` | `/api/admin/users` | List all registered users | Admin |
+| `PATCH` | `/api/admin/users/:id/role` | Update user role (`user`, `premium`, `admin`) | Admin |
+| `GET` | `/api/admin/reports` | Fetch pending recipe reports | Admin |
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `.env` file in the root of `recipe-hub-server`:
+
+```env
+# Server Port & Configuration
+PORT=5000
+NODE_ENV=development
+CLIENT_URL=http://localhost:3000
+
+# MongoDB Database URI
+MONGO_DB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/recipehub?retryWrites=true&w=majority
+AUTH_DB_NAME=recipehub
+
+# JWT Secret Key
+JWT_SECRET=your_super_secret_jwt_key_here
+
+# Better Auth Connection
+BETTER_AUTH_URL=http://localhost:5000
+BETTER_AUTH_SECRET=your_better_auth_secret
+
+# Google Gemini AI API Key
+GEMINI_API_KEY=your_google_gemini_api_key
+
+# Stripe Payment Gateway Secret
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+
+# Nodemailer / Email OTP Service
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_specific_password
+EMAIL_FROM=RecipeHub Security <noreply@recipehub.com>
 ```
 
-### Navigate to Project Directory
+---
 
+## 🚀 Local Setup & Execution
+
+### 1. Prerequisites
+* [Node.js](https://nodejs.org/) (v18.x or higher)
+* [MongoDB](https://www.mongodb.com/) instance (Local or MongoDB Atlas)
+
+### 2. Clone the Repository
 ```bash
-cd recipehub
+git clone https://github.com/OnikTechHub/RecipeHub-Server.git
+cd RecipeHub-Server
 ```
 
-### Install Dependencies
-
+### 3. Install Dependencies
 ```bash
 npm install
 ```
 
-### Run Development Server
-
+### 4. Configure Environment Variables
+Copy `.env.example` to `.env` and fill in your credentials:
 ```bash
+cp .env.example .env
+```
+
+### 5. Run Server
+```bash
+# Run in development mode (with nodemon)
 npm run dev
-```
 
-### Build for Production
-
-```bash
-npm run build
-```
-
-### Start Production Server
-
-```bash
+# Run in production mode
 npm start
 ```
 
----
-
-<!-- ## 👨‍💻 Admin Credentials
-
-```text
-Email: your-admin-email@example.com
-Password: your-admin-password
-```
-
---- -->
-
-## 🎯 Challenge Requirements Implemented
-
-✅ Dark / Light Theme Toggle
-
-✅ JWT Authentication with HTTP-Only Cookies
-
-✅ Better Auth Integration
-
-✅ Google Authentication
-
-✅ Server-Side Pagination
-
-✅ Stripe Payment Integration
-
-✅ Framer Motion Animations
-
-✅ Role-Based Access Control
-
-✅ CRUD Operations
-
-✅ Search & Filtering
-
-✅ Responsive Design
-
----
-
-## 🔮 Future Improvements
-
-* Recipe Comments System
-* Recipe Rating & Reviews
-* Social Sharing Features
-* User Following System
-* AI-Powered Recipe Recommendations
-* PWA Support
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-
-1. Fork the repository
-2. Create a new branch
-
-```bash
-git checkout -b feature-name
-```
-
-3. Commit your changes
-
-```bash
-git commit -m "Add new feature"
-```
-
-4. Push to your branch
-
-```bash
-git push origin feature-name
-```
-
-5. Open a Pull Request
+The API server will be available at [http://localhost:5000](http://localhost:5000).
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is open source and available under the [MIT License](LICENSE).
 
 ---
 
-## 👨‍🍳 Developed By
+## 👨‍💻 Developed By
 
 **Onik Das**
+* 📧 Email: [onikdas.dev@gmail.com](mailto:onikdas.dev@gmail.com)
+* 🌐 Portfolio: [https://onikdas-dev.vercel.app](https://onikdas-dev.vercel.app)
+* 🐙 GitHub: [@OnikTechHub](https://github.com/OnikTechHub)
 
-📧 [onikdas.dev@gmail.com](mailto:your-email@example.com)
-
-🌐 Portfolio:https://onikdas-dev.vercel.app
-
-⭐ If you like this project, don't forget to give it a star on GitHub!
+---
+<div align="center">
+  <sub>⭐ If you find RecipeHub useful, please consider giving it a star on GitHub!</sub>
+</div>
