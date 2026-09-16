@@ -49,7 +49,9 @@ const userSchema = new mongoose.Schema(
 // Fallback search to handle cases where Better-Auth might use 'users' collection
 userSchema.statics.findByEmailWithFallback = async function (email) {
   if (!email) return null;
-  const regexEmail = new RegExp(`^${email.trim()}$`, "i");
+  const cleanEmail = email.trim();
+  const escapeRegex = (str) => str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+  const regexEmail = new RegExp(`^${escapeRegex(cleanEmail)}$`, "i");
   let user = await this.findOne({ email: regexEmail });
   if (!user && mongoose.connection.db) {
     user = await mongoose.connection.db.collection("users").findOne({ email: regexEmail });

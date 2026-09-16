@@ -60,20 +60,30 @@ const getFavorites = async (req, res, next) => {
       });
     }
 
+    const cleanEmail = email.trim();
+    const escapeRegex = (str) => str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+    const emailRegex = new RegExp("^" + escapeRegex(cleanEmail) + "$", "i");
+
     const pipeline = [
-      { $match: { userEmail: email } },
+      { $match: { userEmail: emailRegex } },
       {
         $addFields: {
           convertedRecipeId: {
             $cond: {
-              if: {
-                $regexMatch: {
-                  input: "$recipeId",
-                  regex: /^[0-9a-fA-F]{24}$/,
+              if: { $eq: [{ $type: "$recipeId" }, "objectId"] },
+              then: "$recipeId",
+              else: {
+                $cond: {
+                  if: {
+                    $regexMatch: {
+                      input: { $toString: { $ifNull: ["$recipeId", ""] } },
+                      regex: /^[0-9a-fA-F]{24}$/,
+                    },
+                  },
+                  then: { $toObjectId: { $toString: "$recipeId" } },
+                  else: "$recipeId",
                 },
               },
-              then: { $toObjectId: "$recipeId" },
-              else: "$recipeId",
             },
           },
         },

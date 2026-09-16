@@ -13,25 +13,42 @@ const isRealKey = (key) => {
 };
 
 const getGeminiApiKeys = () => {
-  const keys = [];
+  const keysSet = new Set();
 
-  // Collect GEMINI_API_KEY_1 to GEMINI_API_KEY_10
-  for (let i = 1; i <= 10; i++) {
-    const key = process.env[`GEMINI_API_KEY_${i}`];
-    if (isRealKey(key)) {
-      keys.push(key.trim());
+  const addCandidate = (str) => {
+    if (!str || typeof str !== "string") return;
+    const parts = str.split(/[,;\n\r]+/);
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (isRealKey(trimmed)) {
+        keysSet.add(trimmed);
+      }
+    }
+  };
+
+  // 1. Explicit multi-key env variables (GEMINI_API_KEYS, GEMINI_API_KEY_LIST)
+  addCandidate(process.env.GEMINI_API_KEYS);
+  addCandidate(process.env.GEMINI_API_KEY_LIST);
+
+  // 2. Indexed environment variables (GEMINI_API_KEY_1 through GEMINI_API_KEY_50)
+  for (let i = 1; i <= 50; i++) {
+    const keyVal = process.env[`GEMINI_API_KEY_${i}`];
+    if (keyVal) {
+      addCandidate(keyVal);
     }
   }
 
-  // Fallback to standard GEMINI_API_KEY if no indexed keys exist
-  if (keys.length === 0) {
-    const defaultKey = process.env.GEMINI_API_KEY;
-    if (isRealKey(defaultKey)) {
-      keys.push(defaultKey.trim());
-    }
-  }
+  // 3. Standard GEMINI_API_KEY (supports comma/newline delimited list)
+  addCandidate(process.env.GEMINI_API_KEY);
 
-  return keys;
+  // 4. Scan all process.env keys for any matching GEMINI_*KEY*
+  Object.keys(process.env).forEach((envKey) => {
+    if (/^GEMINI_.*KEY/i.test(envKey)) {
+      addCandidate(process.env[envKey]);
+    }
+  });
+
+  return Array.from(keysSet);
 };
 
 // Global index tracking for round-robin load distribution
@@ -283,7 +300,7 @@ const generateAIContent = async (prompt, systemInstruction = "", userQuery = "")
           body: JSON.stringify(payload),
         });
 
-        recordApiKeyCall(selectedKey);
+        recordApiKeyCall(apiKey);
 
         const data = await response.json();
 

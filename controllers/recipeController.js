@@ -381,8 +381,21 @@ const getMyRecipes = async (req, res, next) => {
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    const totalRecipes = await Recipe.countDocuments({ authorEmail: email });
-    const result = await Recipe.find({ authorEmail: email })
+    const cleanEmail = email.trim();
+    const escapeRegex = (str) => str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+    const emailRegex = new RegExp(`^${escapeRegex(cleanEmail)}$`, "i");
+
+    const queryFilter = {
+      $or: [
+        { authorEmail: emailRegex },
+        { userEmail: emailRegex },
+        { email: emailRegex },
+        { createdBy: emailRegex },
+      ],
+    };
+
+    const totalRecipes = await Recipe.countDocuments(queryFilter);
+    const result = await Recipe.find(queryFilter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
