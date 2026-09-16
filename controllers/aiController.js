@@ -2,6 +2,7 @@ const { generateAIContent, generateAIRecipe } = require("../services/geminiServi
 const { matchLocalKnowledge } = require("../services/knowledgeMatcher");
 const User = require("../models/User");
 const Recipe = require("../models/Recipe");
+const Payment = require("../models/Payment");
 
 /**
  * Direct Mongo DB Query for exact count of AI recipes saved by user email in the last 7 days
@@ -252,8 +253,228 @@ const handleGenerateRecipe = async (req, res, next) => {
   }
 };
 
+/**
+ * AI Smart Grocery List Generator with Strict Backend Access Control
+ * Route: POST /api/ai/generate-grocery-list
+ */
+const handleGenerateGroceryList = async (req, res, next) => {
+  try {
+    const { recipeIds, userEmail, email } = req.body;
+    const targetEmail = (userEmail || email || req.user?.email || "").toLowerCase().trim();
+
+    if (!targetEmail) {
+      return res.status(400).send({
+        success: false,
+        message: "User email is required.",
+      });
+    }
+
+    if (!Array.isArray(recipeIds) || recipeIds.length === 0) {
+      return res.status(400).send({
+        success: false,
+        message: "Please select at least one recipe.",
+      });
+    }
+
+    // 1. Verify User Membership Status
+    const userDoc = await User.findByEmailWithFallback(targetEmail);
+    const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "admin@recipehub.com").toLowerCase();
+    const isAdmin =
+      targetEmail === ADMIN_EMAIL ||
+      targetEmail === "admin@recipehub.com" ||
+      (userDoc && userDoc.role === "admin") ||
+      req.user?.role === "admin";
+
+    const isPremiumUser = isAdmin || (userDoc && (userDoc.isPremium === true || userDoc.role === "premium"));
+
+    if (!isPremiumUser) {
+      return res.status(403).send({
+        success: false,
+        message: "Exclusive Premium Feature. Upgrade to RecipeHub Premium to use Smart Grocery List!",
+      });
+    }
+
+    // 2. Fetch requested recipes from MongoDB
+    const validIds = recipeIds.filter((id) => id && id.toString().match(/^[0-9a-fA-F]{24}$/));
+    const recipes = await Recipe.find({ _id: { $in: validIds } }).lean();
+
+    if (recipes.length === 0) {
+      return res.status(404).send({
+        success: false,
+        message: "No valid recipes found in database.",
+      });
+    }
+
+    // 3. Strict Ownership & Access Verification per Recipe
+    const authorizedRecipes = [];
+
+    for (const recipe of recipes) {
+      const isPaid =
+        recipe.recipeType === "Paid" ||
+        recipe.isPaid === true ||
+        Number(recipe.price || 0) > 0;
+
+      const authorEmails = [
+        recipe.authorEmail,
+        recipe.userEmail,
+        recipe.creatorEmail,
+        recipe.email,
+        recipe.createdBy,
+      ]
+        .filter(Boolean)
+        .map((e) => e.toString().toLowerCase().trim());
+
+      const isAuthor = authorEmails.includes(targetEmail);
+
+      let hasAccess = isAdmin || isAuthor || !isPaid;
+
+      // Paid recipe requires explicit payment verification
+      if (isPaid && !isAdmin && !isAuthor) {
+        const paymentRecord = await Payment.findOne({
+          userEmail: {
+            $regex: new RegExp("^" + targetEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&") + "$", "i"),
+          },
+          recipeId: { $in: [recipe._id.toString(), recipe._id] },
+          paymentStatus: "paid",
+        });
+
+        if (paymentRecord) {
+          hasAccess = true;
+        }
+      }
+
+      if (hasAccess) {
+        authorizedRecipes.push(recipe);
+      }
+    }
+
+    if (authorizedRecipes.length === 0) {
+      return res.status(403).send({
+        success: false,
+        message: "Access Denied: None of the selected recipes are unlocked or accessible for your account.",
+      });
+    }
+
+    // 4. Build Per-Recipe Ingredient Breakdown & Aggregated Aisle Categories
+    const recipeBreakdown = [];
+    const rawIngredients = [];
+
+    authorizedRecipes.forEach((recipe) => {
+      const ingList = Array.isArray(recipe.ingredients)
+        ? recipe.ingredients
+        : typeof recipe.ingredients === "string"
+        ? recipe.ingredients.split(",").map((i) => i.trim()).filter(Boolean)
+        : [];
+
+      recipeBreakdown.push({
+        recipeId: recipe._id.toString(),
+        recipeName: recipe.recipeName || "Recipe",
+        image: recipe.recipeImage || recipe.image,
+        category: Array.isArray(recipe.category) ? recipe.category[0] : recipe.category || "General",
+        ingredients: ingList,
+      });
+
+      rawIngredients.push(...ingList);
+    });
+
+    // Categorization Pools
+    const categoriesPool = {
+      Produce: { title: "Produce & Fresh Veggies", icon: "🥬", items: [] },
+      Dairy: { title: "Dairy, Cheese & Eggs", icon: "🥛", items: [] },
+      Meat: { title: "Meat, Poultry & Seafood", icon: "🥩", items: [] },
+      Pantry: { title: "Grains, Pasta & Bakery", icon: "🌾", items: [] },
+      Spices: { title: "Oils, Spices & Seasonings", icon: "🧂", items: [] },
+      Condiments: { title: "Sauces & Condiments", icon: "🥫", items: [] },
+    };
+
+    const itemMap = new Map();
+
+    rawIngredients.forEach((ingStr) => {
+      if (!ingStr || typeof ingStr !== "string") return;
+      const cleanStr = ingStr.trim();
+      const lower = cleanStr.toLowerCase();
+
+      let catKey = "Pantry";
+
+      if (
+        lower.includes("spinach") || lower.includes("garlic") || lower.includes("onion") ||
+        lower.includes("tomato") || lower.includes("avocado") || lower.includes("lemon") ||
+        lower.includes("lime") || lower.includes("herb") || lower.includes("potato") ||
+        lower.includes("mushroom") || lower.includes("pepper") || lower.includes("lettuce") ||
+        lower.includes("kale") || lower.includes("cilantro") || lower.includes("basil")
+      ) {
+        catKey = "Produce";
+      } else if (
+        lower.includes("milk") || lower.includes("cream") || lower.includes("cheese") ||
+        lower.includes("butter") || lower.includes("egg") || lower.includes("yogurt") ||
+        lower.includes("parmesan") || lower.includes("mozzarella") || lower.includes("cheddar")
+      ) {
+        catKey = "Dairy";
+      } else if (
+        lower.includes("chicken") || lower.includes("beef") || lower.includes("steak") ||
+        lower.includes("pork") || lower.includes("salmon") || lower.includes("shrimp") ||
+        lower.includes("fish") || lower.includes("bacon") || lower.includes("turkey") ||
+        lower.includes("tuna")
+      ) {
+        catKey = "Meat";
+      } else if (
+        lower.includes("oil") || lower.includes("salt") || lower.includes("pepper") ||
+        lower.includes("paprika") || lower.includes("oregano") || lower.includes("cumin") ||
+        lower.includes("cinnamon") || lower.includes("vinegar") || lower.includes("thyme") ||
+        lower.includes("spice") || lower.includes("seasoning")
+      ) {
+        catKey = "Spices";
+      } else if (
+        lower.includes("sauce") || lower.includes("soy") || lower.includes("mustard") ||
+        lower.includes("mayo") || lower.includes("ketchup") || lower.includes("honey") ||
+        lower.includes("syrup") || lower.includes("paste")
+      ) {
+        catKey = "Condiments";
+      }
+
+      const existing = itemMap.get(cleanStr);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        itemMap.set(cleanStr, { name: cleanStr, category: catKey, count: 1 });
+      }
+    });
+
+    itemMap.forEach((item) => {
+      if (categoriesPool[item.category]) {
+        categoriesPool[item.category].items.push(item);
+      } else {
+        categoriesPool.Pantry.items.push(item);
+      }
+    });
+
+    const activeCategories = Object.values(categoriesPool).filter((cat) => cat.items.length > 0);
+    const totalItemsCount = itemMap.size;
+
+    const minEst = Math.max(8.5, totalItemsCount * 1.85);
+    const maxEst = Math.max(12.0, totalItemsCount * 2.65);
+    const costString = `$${minEst.toFixed(2)} - $${maxEst.toFixed(2)}`;
+
+    res.send({
+      success: true,
+      data: {
+        selectedRecipesCount: authorizedRecipes.length,
+        totalItemsCount,
+        estimatedCost: costString,
+        categories: activeCategories,
+        recipeBreakdown,
+      },
+    });
+  } catch (error) {
+    console.error("Grocery List Backend Error:", error);
+    next(error);
+  }
+};
+
 module.exports = {
   handleAIChat,
   getAIUsageStatus,
   handleGenerateRecipe,
+  handleGenerateGroceryList,
 };
+

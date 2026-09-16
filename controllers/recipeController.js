@@ -13,7 +13,7 @@ const Payment = require("../models/Payment");
  */
 const getAllRecipes = async (req, res, next) => {
   try {
-    const { search, category, filter = "all", email, page = 1, limit = 6 } = req.query;
+    const { search, category, filter = "all", email, page = 1, limit = 6, sort } = req.query;
     const andConditions = [];
 
     // 1. Search Query Filter
@@ -139,9 +139,14 @@ const getAllRecipes = async (req, res, next) => {
     const limitNum = Math.max(1, parseInt(limit) || 6);
     const skip = (pageNum - 1) * limitNum;
 
+    let sortOption = { createdAt: -1, _id: -1 };
+    if (sort === "popular" || sort === "likes" || sort === "communityLikes") {
+      sortOption = { likesCount: -1, communityLikes: -1, likes: -1, createdAt: -1, _id: -1 };
+    }
+
     // Tie-break with _id: -1 for deterministic pagination (prevents duplicate items across pages)
     const result = await Recipe.find(query)
-      .sort({ createdAt: -1, _id: -1 })
+      .sort(sortOption)
       .skip(skip)
       .limit(limitNum)
       .lean();
