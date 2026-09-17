@@ -40,15 +40,16 @@ const getTransporter = () => {
       port: port === 465 ? 465 : 587,
       secure: port === 465,
       pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
+      maxConnections: 1,
+      rateDelta: 20000,
+      rateLimit: 5,
       auth: {
         user,
         pass,
       },
-      connectionTimeout: 10000, // 10 seconds connection timeout
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
+      connectionTimeout: 20000, // 20 seconds connection timeout
+      greetingTimeout: 20000,
+      socketTimeout: 25000,
       tls: {
         rejectUnauthorized: false,
       },
@@ -60,14 +61,16 @@ const getTransporter = () => {
     port,
     secure: port === 465,
     pool: true,
-    maxConnections: 5,
+    maxConnections: 1,
+    rateDelta: 20000,
+    rateLimit: 5,
     auth: {
       user,
       pass,
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 25000,
     tls: {
       rejectUnauthorized: false,
     },
