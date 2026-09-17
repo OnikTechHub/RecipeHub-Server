@@ -17,7 +17,8 @@ process.on("uncaughtException", (error) => {
 });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT, 10) || 5000;
+const HOST = "0.0.0.0";
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
 
 // Initialize database connection
@@ -94,8 +95,8 @@ app.use(errorHandler);
 
 // Start server
 if (process.env.NODE_ENV !== "test") {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server is running smoothly on port: ${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`🚀 Server is running smoothly on http://${HOST}:${PORT}`);
   });
 }
 

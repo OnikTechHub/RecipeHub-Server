@@ -1,8 +1,14 @@
 const dns = require("node:dns");
 const mongoose = require("mongoose");
 
-// Set reliable DNS servers to avoid SRV lookup failures on Windows/ISPs
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
+// Set reliable DNS servers on Windows to avoid SRV lookup failures
+try {
+  if (process.platform === "win32") {
+    dns.setServers(["8.8.8.8", "8.8.4.4"]);
+  }
+} catch (dnsErr) {
+  console.warn("⚠️ Custom DNS servers could not be set:", dnsErr.message);
+}
 
 const connectDB = async () => {
   const mongoUri = process.env.MONGO_DB_URI || process.env.MONGO_DB_URL;
