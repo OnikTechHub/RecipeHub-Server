@@ -1,10 +1,7 @@
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-/**
- * Configure Nodemailer transporter from environment variables (.env)
- */
 /**
  * Helper to sanitize environment variable values (stripping surrounding quotes and whitespace)
  */
@@ -14,93 +11,41 @@ const cleanEnvVar = (val) => {
 };
 
 /**
- * Configure Nodemailer transporter from environment variables (.env / Render process.env)
+ * Get initialized Resend client
  */
-const getTransporter = () => {
-  // Always ensure freshest environment variables are loaded
+const getResendClient = () => {
   require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
-
-  const rawHost = cleanEnvVar(process.env.SMTP_HOST) || "smtp.gmail.com";
-  const port = parseInt(cleanEnvVar(process.env.SMTP_PORT) || "587", 10);
-  const user = cleanEnvVar(process.env.SMTP_USER);
-  const pass = cleanEnvVar(process.env.SMTP_PASS).replace(/\s+/g, "");
-
-  if (!user || !pass) {
-    throw new Error(
-      "SMTP credentials not configured. Please set SMTP_USER and SMTP_PASS in environment variables on Render / .env"
-    );
+  const apiKey = cleanEnvVar(process.env.RESEND_API_KEY);
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is missing. Please set RESEND_API_KEY in environment variables.");
   }
-
-  const isGmail = rawHost.toLowerCase().includes("gmail");
-
-  // Automatic optimization for Gmail on cloud hosts like Render
-  if (isGmail) {
-    return nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: port === 465 ? 465 : 587,
-      secure: port === 465,
-      pool: true,
-      maxConnections: 1,
-      rateDelta: 20000,
-      rateLimit: 5,
-      auth: {
-        user,
-        pass,
-      },
-      connectionTimeout: 20000, // 20 seconds connection timeout
-      greetingTimeout: 20000,
-      socketTimeout: 25000,
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
-  }
-
-  return nodemailer.createTransport({
-    host: rawHost,
-    port,
-    secure: port === 465,
-    pool: true,
-    maxConnections: 1,
-    rateDelta: 20000,
-    rateLimit: 5,
-    auth: {
-      user,
-      pass,
-    },
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 25000,
-    tls: {
-      rejectUnauthorized: false,
-    },
-  });
+  return new Resend(apiKey);
 };
 
 /**
- * Format the sender FROM address cleanly for SMTP/Gmail
+ * Format sender email for Resend
+ * Resend default domain for unverified domain test mode: "onboarding@resend.dev"
+ * Custom domain formatting: e.g. "RecipeHub <onboarding@resend.dev>" or process.env.EMAIL_FROM
  */
 const getSenderFrom = () => {
-  const user = cleanEnvVar(process.env.SMTP_USER);
-  const host = (cleanEnvVar(process.env.SMTP_HOST) || "smtp.gmail.com").toLowerCase();
   const configuredFrom = cleanEnvVar(process.env.EMAIL_FROM);
-
-  if (host.includes("gmail") || !configuredFrom || configuredFrom.includes("noreply@recipehub.com")) {
-    return `"RecipeHub" <${user}>`;
-  }
-  return configuredFrom;
+  if (configuredFrom) return configuredFrom;
+  return "RecipeHub <onboarding@resend.dev>";
 };
 
 /**
- * Verify current SMTP connection health
+ * Verify current Resend email service status
  */
 const verifySmtpConnection = async () => {
-  const transporter = getTransporter();
-  await transporter.verify();
+  const apiKey = cleanEnvVar(process.env.RESEND_API_KEY);
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is not configured in environment variables.");
+  }
   return {
     success: true,
-    user: cleanEnvVar(process.env.SMTP_USER),
-    host: cleanEnvVar(process.env.SMTP_HOST) || "smtp.gmail.com",
+    service: "Resend API",
+    apiKeyConfigured: true,
+    from: getSenderFrom(),
   };
 };
 
@@ -108,7 +53,7 @@ const verifySmtpConnection = async () => {
  * Send 6-digit registration OTP verification email to user's real email address
  */
 const sendRegistrationOtpEmail = async (toEmail, name, otp) => {
-  const transporter = getTransporter();
+  const resend = getResendClient();
   const from = getSenderFrom();
 
   const htmlContent = `
@@ -136,19 +81,26 @@ const sendRegistrationOtpEmail = async (toEmail, name, otp) => {
     </div>
   `;
 
-  await transporter.sendMail({
+  const { data, error } = await resend.emails.send({
     from,
-    to: toEmail,
+    to: [toEmail],
     subject: `${otp} is your RecipeHub verification code`,
     html: htmlContent,
   });
+
+  if (error) {
+    console.error("❌ Resend sendRegistrationOtpEmail error:", error);
+    throw new Error(error.message || "Resend email delivery failed.");
+  }
+
+  return data;
 };
 
 /**
  * Send 6-digit password reset OTP email to user's real email address
  */
 const sendPasswordResetOtpEmail = async (toEmail, otp) => {
-  const transporter = getTransporter();
+  const resend = getResendClient();
   const from = getSenderFrom();
 
   const htmlContent = `
@@ -176,19 +128,26 @@ const sendPasswordResetOtpEmail = async (toEmail, otp) => {
     </div>
   `;
 
-  await transporter.sendMail({
+  const { data, error } = await resend.emails.send({
     from,
-    to: toEmail,
+    to: [toEmail],
     subject: `${otp} is your RecipeHub password reset code`,
     html: htmlContent,
   });
+
+  if (error) {
+    console.error("❌ Resend sendPasswordResetOtpEmail error:", error);
+    throw new Error(error.message || "Resend password reset delivery failed.");
+  }
+
+  return data;
 };
 
 /**
  * Send security alert email after successful user login
  */
 const sendLoginSuccessEmail = async (toEmail, name) => {
-  const transporter = getTransporter();
+  const resend = getResendClient();
   const from = getSenderFrom();
   const time = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
 
@@ -216,19 +175,26 @@ const sendLoginSuccessEmail = async (toEmail, name) => {
     </div>
   `;
 
-  await transporter.sendMail({
+  const { data, error } = await resend.emails.send({
     from,
-    to: toEmail,
+    to: [toEmail],
     subject: `Security Alert: New login to your RecipeHub account`,
     html: htmlContent,
   });
+
+  if (error) {
+    console.error("❌ Resend sendLoginSuccessEmail error:", error);
+    throw new Error(error.message || "Resend login alert delivery failed.");
+  }
+
+  return data;
 };
 
 /**
  * Send welcome / registration success email to user's real email address
  */
 const sendRegistrationSuccessEmail = async (toEmail, name) => {
-  const transporter = getTransporter();
+  const resend = getResendClient();
   const from = getSenderFrom();
 
   const htmlContent = `
@@ -261,21 +227,28 @@ const sendRegistrationSuccessEmail = async (toEmail, name) => {
     </div>
   `;
 
-  await transporter.sendMail({
+  const { data, error } = await resend.emails.send({
     from,
-    to: toEmail,
+    to: [toEmail],
     subject: `🎉 Welcome to RecipeHub! Your Account is Ready`,
     html: htmlContent,
   });
+
+  if (error) {
+    console.error("❌ Resend sendRegistrationSuccessEmail error:", error);
+    throw new Error(error.message || "Resend welcome email delivery failed.");
+  }
+
+  return data;
 };
 
 /**
  * Send contact form submission directly to system administrator email
  */
 const sendContactAdminEmail = async ({ name, email, subject, message }) => {
-  const transporter = getTransporter();
+  const resend = getResendClient();
   const from = getSenderFrom();
-  const adminEmail = (process.env.ADMIN_EMAIL || process.env.SMTP_USER || "admin@recipehub.com").trim();
+  const adminEmail = cleanEnvVar(process.env.ADMIN_EMAIL) || "onikdas.dev@gmail.com";
 
   const htmlContent = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
@@ -305,13 +278,20 @@ const sendContactAdminEmail = async ({ name, email, subject, message }) => {
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"${name} via RecipeHub" <${process.env.SMTP_USER}>`,
-    to: adminEmail,
+  const { data, error } = await resend.emails.send({
+    from,
+    to: [adminEmail],
     replyTo: email,
     subject: `[Contact Form] ${subject || "Inquiry"} - from ${name}`,
     html: htmlContent,
   });
+
+  if (error) {
+    console.error("❌ Resend sendContactAdminEmail error:", error);
+    throw new Error(error.message || "Resend contact email delivery failed.");
+  }
+
+  return data;
 };
 
 module.exports = {
