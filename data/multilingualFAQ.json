@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "keywords": ["budget", "5 dollar", "under $5", "under 5", "$5", "cheap", "কম খরচে", "বাজেট", "ডিনার", "5"],
+    "question_en": "Do you have any delicious dinner ideas under $5?",
+    "question_bn": "৫ ডলারের কম খরচে সুস্বাদু ডিনারের কোনো আইডিয়া আছে কি?",
+    "answer_en": "Here are two budget-friendly dinner ideas under $5:\n1. **Gourmet Crispy Fried Rice & Egg Bowl (~$3.50):** Uses leftover rice, 2 eggs, frozen veggies, soy sauce, and sesame oil.\n2. **Classic Spaghetti Aglio e Olio (~$4.20):** Spaghetti, olive oil, fresh garlic, chili flakes, and parsley.",
+    "answer_bn": "৫ ডলারের কম খরচে সুস্বাদু দুটি ডিনারের আইডিয়া:\n১. **গার্লিক বাটার ফ্রাইড রাইস ও ডিম বোল (~৩.৫০ ডলার):** বাঁকা ভাত, ২টি ডিম, ফ্রোজেন সবজি, সয়া সস এবং তিলের তেল দিয়ে ঝটপট তৈরি।\n২. **ক্লাসিক স্প্যাগেটি আগ্লিও ই ওলিও (~৪.২০ ডলার):** স্প্যাগেটি, অলিভ ওয়েল, রসুন কুচি এবং চিলি ফ্লেকস।"
+  },
+  {
+    "id": 2,
+    "keywords": ["fast", "quick", "10 minutes", "rush", "ঝটপট", "১০ মিনিট", "তাড়াতাড়ি", "10 মিনিট", "10 minutes", "10-minute"],
+    "question_en": "I am in a rush. Give me a 10-minute quick recipe.",
+    "question_bn": "খুব দ্রুত ক্ষুধা পেয়েছে কিন্তু সময় নেই, ১০ মিনিটের মধ্যে বানানো যায় এমন কিছু বলো।",
+    "answer_en": "Here is a 10-minute quick recipe:\n**15-Minute Garlic Butter Egg Pasta:** Boil pasta, sauté garlic in butter, toss with pasta, 2 eggs, and a pinch of chili flakes. Ready in minutes!",
+    "answer_bn": "১০ মিনিটে ঝটপট গার্লিক বাটার ডিম-পাস্তা:\nপাস্তা সেদ্ধ করে কড়াইয়ে মাখনে রসুন কুচি ও ডিম দিয়ে পাস্তাটি মিশিয়ে নিন। মাত্র ১০-১৫ মিনিটে তৈরি!"
+  },
+  {
+    "id": 3,
+    "keywords": ["sweet", "dessert", "mood", "মন ভালো", "মিষ্টি", "ডেজার্ট"],
+    "question_en": "I want something sweet to make my mood better.",
+    "question_bn": "আজ মন খুব ভালো, তাই মিষ্টি বা ডেজার্ট জাতীয় কিছু বানাতে চাই।",
+    "answer_en": "Treat yourself with a **Classic Vanilla Bean Crème Brûlée** or a quick **Chocolate Mug Cake**! Both are super satisfying and easy to make.",
+    "answer_bn": "আপনার মন ভালো করতে **ক্লাসিক ভ্যানিলা বিন ক্রিম ব্রুলি** অথবা ঝটপট একটি **চকলেট মগ কেক** ট্রাই করতে পারেন। এটি মুহূর্তেই আপনার মন ভালো করে দেবে!"
+  },
+  {
+    "id": 4,
+    "keywords": ["breakfast", "healthy", "morning", "সকালের নাস্তা", "স্বাস্থ্যকর"],
+    "question_en": "Give me a healthy and quick breakfast recipe.",
+    "question_bn": "একটি স্বাস্থ্যকর ও ঝটপট সকালের নাস্তার রেসিপি দাও।",
+    "answer_en": "Try **Chef's Vegan / Vegetarian Oats Special**! Packed with bananas, oats, and nuts, ready in 12 minutes.",
+    "answer_bn": "ট্রাই করতে পারেন **ওটস স্পেশাল ব্রেকফাস্ট**! কলা, ওটস এবং বাদাম দিয়ে মাত্র ১২ মিনিটে তৈরি।"
+  },
+  {
+    "id": 5,
+    "keywords": ["leftover", "rice", "eggs", "बेঁচে যাওয়া", "বেঁচে যাওয়া", "ভাত", "ডিম"],
+    "question_en": "What can I cook with leftover rice and eggs?",
+    "question_bn": "ফ্রিজে বেঁচে যাওয়া ভাত আর ডিম আছে, কী বানাতে পারি?",
+    "answer_en": "You can easily make a delicious Egg Fried Rice with some soy sauce, garlic, and veggies using your leftover rice.",
+    "answer_bn": "সহজেই সুস্বাদু **এগ ফ্রাইড রাইস** বানিয়ে নিতে পারেন সয়া সস, রসুন ও সামান্য সবজি দিয়ে।"
+  },
+  {
+    "id": 6,
+    "keywords": ["unlock", "premium", "secret", "stripe", "পেমেন্ট", "প্রিমিয়াম", "আনলক"],
+    "question_en": "How can I unlock secret premium recipes?",
+    "question_bn": "আমি কীভাবে সিক্রেট প্রিমিয়াম রেসিপিগুলো আনলক করব?",
+    "answer_en": "You can securely unlock any secret recipe for just $4.99 using our integrated Stripe payment system.",
+    "answer_bn": "আমাদের ইন্টিগ্রেটেড স্ট্রাইপ (Stripe) পেমেন্ট সিস্টেমের মাধ্যমে মাত্র ৪.৯৯ ডলারে যেকোনো সিক্রেট রেসিপি নিরাপদে আনলক করতে পারবেন।"
+  },
+  {
+    "id": 7,
+    "keywords": ["post", "share", "recipe", "রেসিপি", "পোস্ট", "শেয়ার"],
+    "question_en": "Can I post my own recipes on RecipeHub?",
+    "question_bn": "আমি কি RecipeHub-এ আমার নিজের রেসিপি পোস্ট করতে পারব?",
+    "answer_en": "Yes! Registered users and chefs can easily share their culinary masterpieces with the community through their profile dashboard.",
+    "answer_bn": "হ্যাঁ! রেজিস্টার্ড ইউজার এবং শেফরা তাদের প্রোফাইল ড্যাশবোর্ড থেকে খুব সহজেই কমিউনিটির সাথে নিজেদের রেসিপি শেয়ার করতে পারবেন।"
+  },
+  {
+    "id": 8,
+    "keywords": ["tired", "exhausted", "lazy", "cozy", "comfort", "ক্লান্ত", "আরামদায়ক", "কমফোর্ট"],
+    "question_en": "I am feeling tired today. Suggest a cozy comfort food.",
+    "question_bn": "আজ আমার শরীর খুব ক্লান্ত, আরামদায়ক কোনো কমফোর্ট ফুড সাজেস্ট করো।",
+    "answer_en": "A warm bowl of creamy soup or Garlic Butter Ramen will be perfect to relax your mind and body.",
+    "answer_bn": "আপনার শরীর ও মনকে রিফ্রেশ করতে এক বাটি গরম ক্রিম্পি স্যুপ অথবা গার্লিক বাটার রামেন একদম পারফেক্ট।"
+  },
+  {
+    "id": 9,
+    "keywords": ["spicy", "salmon", "ঝাল", "স্পেশাল", "ফিশ", "গ্রিলড"],
+    "question_en": "Suggest a spicy and premium dinner recipe.",
+    "question_bn": "একটু স্পেশাল এবং প্রিমিয়াম ডিনারের রেসিপি দাও।",
+    "answer_en": "Try our **Spicy Lemon Herb Grilled Salmon**! It is loaded with flavors and great for a special dinner.",
+    "answer_bn": "আমাদের **স্পাইসি লেমন হার্ব গ্রিলড স্যামন** ট্রাই করতে পারেন! এটি অত্যন্ত সুস্বাদু এবং স্পেশাল ডিনারের জন্য দারুণ।"
+  },
+  {
+    "id": 10,
+    "keywords": ["search", "filter", "category", "meal type", "খুঁজে", "ক্যাটাগরি", "সার্চ"],
+    "question_en": "How can I filter recipes by meal type?",
+    "question_bn": "আমি কীভাবে মিল টাইপ বা ক্যাটাগরি অনুযায়ী রেসিপি ফিল্টার করব?",
+    "answer_en": "You can go to the 'Browse Recipes' page and use the category filters (Breakfast, Lunch, Dinner, Desserts) or search bar instantly.",
+    "answer_bn": "আপনি 'Browse Recipes' পেজে গিয়ে খুব সহজেই ক্যাটাগরি ফিল্টার (ব্রেকফাস্ট, লাঞ্চ, ডিনার, ডেজার্ট) অথবা সার্চ বার ব্যবহার করতে পারেন।"
+  }
+]

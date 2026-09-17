@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   handleAIChat,
+  getAIChatStatus,
   getAIUsageStatus,
   handleGenerateRecipe,
   handleGenerateGroceryList,
@@ -14,6 +15,12 @@ router.post(
   ["/api/ai/chat", "/ai/chat"],
   aiRateLimiter,
   handleAIChat
+);
+
+// AI Chatbot daily status & quota check
+router.get(
+  ["/api/ai/chat-status", "/ai/chat-status"],
+  getAIChatStatus
 );
 
 // AI usage metrics

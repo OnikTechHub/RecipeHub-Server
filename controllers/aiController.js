@@ -55,13 +55,79 @@ const getAIWeeklyCountFromDB = async (userEmail) => {
   return { usageCount, resetAt };
 };
 
+const AIChatUsage = require("../models/AIChatUsage");
+
 /**
- * Global AI Chatbot Endpoint with Smart Hybrid Intent Matching
+ * Get or update daily AI chatbot usage count
+ */
+const getDailyChatUsage = async (identifier) => {
+  if (!identifier) return { usageCount: 0, dateStr: new Date().toISOString().split("T")[0] };
+  const dateStr = new Date().toISOString().split("T")[0];
+  const cleanIdentifier = identifier.trim().toLowerCase();
+
+  let record = await AIChatUsage.findOne({ identifier: cleanIdentifier, dateStr });
+  if (!record) {
+    record = await AIChatUsage.create({ identifier: cleanIdentifier, dateStr, count: 0 });
+  }
+  return { record, usageCount: record.count, dateStr };
+};
+
+/**
+ * Check AI Chatbot Status & Daily Limit
+ * Route: GET /api/ai/chat-status?email=...
+ */
+const getAIChatStatus = async (req, res, next) => {
+  try {
+    const { email } = req.query;
+    const targetEmail = (email || req.user?.email || "").trim().toLowerCase();
+    const adminEmail = (process.env.ADMIN_EMAIL || "admin@recipehub.com").trim().toLowerCase();
+
+    let isPremium = targetEmail === adminEmail || req.user?.role === "admin" || req.user?.role === "premium" || req.user?.isPremium === true;
+
+    if (!isPremium && targetEmail) {
+      const userDoc = await User.findByEmailWithFallback(targetEmail);
+      if (userDoc && (userDoc.isPremium === true || userDoc.role === "premium" || userDoc.role === "admin")) {
+        isPremium = true;
+      }
+    }
+
+    if (isPremium) {
+      return res.send({
+        success: true,
+        isPremium: true,
+        usageCount: 0,
+        dailyLimit: 9999,
+        remaining: 9999,
+        limitReached: false,
+      });
+    }
+
+    const identifier = targetEmail || req.headers["x-forwarded-for"] || req.ip || "guest_user";
+    const { usageCount } = await getDailyChatUsage(identifier);
+    const dailyLimit = 5;
+    const remaining = Math.max(0, dailyLimit - usageCount);
+    const limitReached = usageCount >= dailyLimit;
+
+    res.send({
+      success: true,
+      isPremium: false,
+      usageCount,
+      dailyLimit,
+      remaining,
+      limitReached,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Global AI Chatbot Endpoint with Smart Hybrid Intent Matching & 5 Chats/Day Limit
  * Route: POST /api/ai/chat
  */
 const handleAIChat = async (req, res, next) => {
   try {
-    const { message, history } = req.body;
+    const { message, history, userEmail, email } = req.body;
     if (!message || !message.trim()) {
       return res.status(400).send({
         success: false,
@@ -69,37 +135,119 @@ const handleAIChat = async (req, res, next) => {
       });
     }
 
-    // 1. Smart Hybrid Check: Query Local Knowledge Base First
+    // 1. Check User Membership & Daily Chat Limit
+    const targetEmail = (userEmail || email || req.user?.email || "").trim().toLowerCase();
+    const adminEmail = (process.env.ADMIN_EMAIL || "admin@recipehub.com").trim().toLowerCase();
+
+    let isPremium = targetEmail === adminEmail || req.user?.role === "admin" || req.user?.role === "premium" || req.user?.isPremium === true;
+
+    if (!isPremium && targetEmail) {
+      const userDoc = await User.findByEmailWithFallback(targetEmail);
+      if (userDoc && (userDoc.isPremium === true || userDoc.role === "premium" || userDoc.role === "admin")) {
+        isPremium = true;
+      }
+    }
+
+    const identifier = targetEmail || req.headers["x-forwarded-for"] || req.ip || "guest_user";
+    let chatUsageRecord = null;
+    let currentUsageCount = 0;
+
+    if (!isPremium) {
+      const usageData = await getDailyChatUsage(identifier);
+      chatUsageRecord = usageData.record;
+      currentUsageCount = usageData.usageCount;
+
+      if (currentUsageCount >= 5) {
+        return res.status(403).send({
+          success: false,
+          limitReached: true,
+          usageCount: currentUsageCount,
+          dailyLimit: 5,
+          remaining: 0,
+          reply: "🔒 Daily AI chat limit reached (5/5). Upgrade to Premium for unlimited access!",
+          message: "Daily AI chat limit reached (5/5 messages for Free users). Upgrade to Premium for unlimited access!",
+        });
+      }
+    }
+
+    // 2. Smart Hybrid Check: Query Local Knowledge Base First
     const localMatch = matchLocalKnowledge(message);
+    let responseReply = "";
+    let responseSource = "";
+
     if (localMatch.matched && localMatch.reply) {
-      return res.send({
-        success: true,
-        reply: localMatch.reply,
-        source: "local_knowledge_base",
-      });
+      responseReply = localMatch.reply;
+      responseSource = "multilingual_faq_cache";
+    } else {
+      // 3. Custom / Live Query: Route to Gemini 10-Key API Utility
+      const systemInstruction = `You are Chef RecipeHub, an elite, warm, and highly intelligent AI culinary assistant for the RecipeHub platform.
+
+YOUR MANDATORY CORE BEHAVIOR RULES:
+
+1. STRICT DOMAIN BOUNDARY (ONLY COOKING, RECIPES & PLATFORM):
+   - You are ONLY permitted to answer questions related to cooking, recipes, ingredients, kitchen tips, food preparation, flavor pairings, dietary substitutes, and RecipeHub platform features.
+   - ABSOLUTE GUARD: If the user asks ANY non-culinary or off-topic question (such as programming/coding, cricket, sports, finance, stocks, math, politics, history, general technology, or general trivia):
+     - DO NOT attempt to answer or convert the topic into a recipe!
+     - IMMEDIATELY & POLITELY decline in the user's EXACT language.
+     - Decline Response in Bengali:
+       "👨‍🍳 **শেফ রেসিপিহাব এআই অ্যাসিস্ট্যান্ট**:
+       
+       আমি আন্তরিকভাবে দুঃখিত! আমি শুধুমাত্র রান্না, রেসিপি, উপকরণ, ও RecipeHub প্ল্যাটফর্ম সংক্রান্ত বিষয়ে সহায়তা করতে পারি। রান্নার বাইরের বিষয়ে (যেমন কোডিং, খেলাধুলা, বা সাধারণ বিষয়) সাহায্য করা আমার পক্ষে সম্ভব নয়। 
+
+       অনুগ্রহ করে রান্না বা রেসিপি সম্পর্কিত কোনো প্রশ্ন করুন, আমি সানন্দে উত্তর দেব! 🍳✨"
+     - Decline Response in English:
+       "👨‍🍳 **Chef RecipeHub AI Assistant**:
+       
+       I apologize, but I am specifically designed to assist ONLY with cooking, recipes, food preparation, ingredients, and RecipeHub platform features. I cannot assist with non-culinary topics like coding, sports, finance, or general trivia.
+
+       Please feel free to ask any culinary or recipe question, and I'll be happy to help! 🍳✨"
+
+2. STRICT LANGUAGE MATCHING (BENGALI & ENGLISH):
+   - Automatically detect the user's prompt language.
+   - If the user asks in Bengali (Bangla script like "সহজ রেসিপি", "আমি খুব ক্লান্ত", or Banglish), respond ENTIRELY in fluent, polite, clear Bengali (বাংলা). Never output English text when asked in Bengali.
+   - If the user asks in English, respond ENTIRELY in clear, warm English.
+
+3. DIRECT RECIPE SUGGESTIONS & USER-CENTRIC RESPONSIVENESS:
+   - Always directly answer and fulfill the user's specific culinary query.
+   - Immediately suggest concrete, appetizing recipes, ingredient steps, cost breakdowns, or cooking hacks tailored to their query.
+
+4. MOOD & BUDGET ADAPTABILITY:
+   - When the user mentions a mood or budget, suggest 1-2 recipes matching that exact vibe or price limit with estimated costs.
+
+5. CULINARY FORMATTING:
+   - Format responses using clean Markdown (bold headings, bullet points, numbered steps, appetizing emojis).`;
+
+      let combinedPrompt = message;
+      if (Array.isArray(history) && history.length > 0) {
+        const formattedHistory = history
+          .slice(-6)
+          .map((h) => `${h.role === "user" ? "User" : "Chef"}: ${h.text}`)
+          .join("\n");
+        combinedPrompt = `Previous Conversation:\n${formattedHistory}\n\nUser Question: ${message}`;
+      }
+
+      responseReply = await generateAIContent(combinedPrompt, systemInstruction, message);
+      responseSource = "gemini_ai";
     }
 
-    // 2. Custom / Live Query: Route to Gemini 10-Key API Utility
-    const systemInstruction = `You are Chef RecipeHub, an expert, friendly AI culinary assistant for the RecipeHub platform.
-Your job is to answer questions about cooking, recipes, ingredients, flavor pairings, dietary substitutes, cooking techniques, meal planning, and RecipeHub features.
-Keep responses helpful, appetizing, concise, structured with bullet points or bold text where helpful, and polite. Always maintain a warm, culinary expert tone.
-If the user asks questions that are completely unrelated to cooking, food, culinary techniques, or the RecipeHub platform (e.g., coding, politics, physics, math, general off-topic topics), politely state that you are Chef RecipeHub—a dedicated culinary assistant—and invite them to ask about recipes, cooking hacks, dinner menus, or RecipeHub platform features instead. Do NOT invent fake recipes for unrelated topics.`;
-
-    let combinedPrompt = message;
-    if (Array.isArray(history) && history.length > 0) {
-      const formattedHistory = history
-        .slice(-6)
-        .map((h) => `${h.role === "user" ? "User" : "Chef"}: ${h.text}`)
-        .join("\n");
-      combinedPrompt = `Previous Conversation:\n${formattedHistory}\n\nUser Question: ${message}`;
+    // Increment daily usage count for free users upon successful answer
+    if (!isPremium && chatUsageRecord) {
+      chatUsageRecord.count += 1;
+      await chatUsageRecord.save();
+      currentUsageCount = chatUsageRecord.count;
     }
 
-    const reply = await generateAIContent(combinedPrompt, systemInstruction, message);
+    const remaining = isPremium ? 9999 : Math.max(0, 5 - currentUsageCount);
 
     res.send({
       success: true,
-      reply: reply,
-      source: "gemini_ai",
+      reply: responseReply,
+      source: responseSource,
+      isPremium,
+      usageCount: currentUsageCount,
+      dailyLimit: isPremium ? 9999 : 5,
+      remaining,
+      limitReached: !isPremium && currentUsageCount >= 5,
     });
   } catch (error) {
     console.error("Gemini API Error Details:", error?.response?.data || error?.message || error);
@@ -473,6 +621,7 @@ const handleGenerateGroceryList = async (req, res, next) => {
 
 module.exports = {
   handleAIChat,
+  getAIChatStatus,
   getAIUsageStatus,
   handleGenerateRecipe,
   handleGenerateGroceryList,

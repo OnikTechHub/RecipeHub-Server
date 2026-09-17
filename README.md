@@ -21,24 +21,30 @@
 
 ## 🌟 Core Backend Capabilities
 
-### ⚡ 1. Google Gemini AI Engine
-* **Prompt Processing**: Transforms culinary prompts, available pantry items, and dietary constraints into structured JSON recipe objects.
-* **Intelligent Recipe Formatting**: Returns precise prep time, cook time, serving yields, difficulty rating, ingredient lists, step-by-step guides, and nutrition metrics.
+### ⚡ 1. Multi-Lingual AI Chatbot & Intent Caching Engine
+* **Semantic FAQ Caching**: Intercepts incoming chatbot queries against a 10-item multilingual dataset (Bengali & English) stored in `multilingualFAQ.json`. Returns instant answers for cached questions with zero API cost and zero network latency.
+* **Automatic Language Matching**: Detects Unicode script (`[\u0980-\u09FF]`) and Banglish keywords to automatically respond in 100% fluent Bengali for Bengali prompts and English for English prompts.
+* **Google Gemini 10-Key Rotation Fallback**: Uncached or complex culinary queries fall back to a 10-API key load-balanced Gemini AI engine with automatic failover across models (`gemini-1.5-flash`, `gemini-2.0-flash`).
+* **Strict Domain Boundary Guard**: Enforces strict culinary boundary rules—politely declining off-topic non-culinary questions (coding, sports, finance, politics) in the user's language.
 
-### 🔒 2. Authentication & Email OTP Service
-* **Secure Registration**: Generates and emails 6-digit verification OTP codes via Nodemailer/SMTP prior to user account creation.
+### 🔒 2. AI Daily Rate Limiting & Quota Management
+* **Chatbot Daily Limit**: Tracks daily user chat requests in MongoDB (`ai_chat_usages` collection), allowing Free users up to 5 messages per day while unlocking unlimited queries for Premium members and Admins.
+* **AI Recipe Weekly Quota**: Enforces a 7-day rolling window quota (max 2 AI recipes/week) with live reset timestamp calculations.
+
+### 📧 3. Authentication & Email OTP Service
+* **Secure Registration**: Generates and emails 6-digit verification OTP codes via Resend / Nodemailer prior to user account creation.
 * **OTP Lifecycle Management**: Automatic code expiry, retry limits, and duplicate email prevention.
 * **JWT Token Management**: Secure token issuing and HTTP-Only cookie authentication for session integrity.
 
-### 💳 3. Stripe Payment Integration
+### 💳 4. Stripe Payment Integration
 * **PaymentIntent Engine**: Securely creates Stripe Payment Intents for purchasing Premium Membership.
 * **Subscription & Tier Upgrade**: Automatically upgrades user accounts to `premium` upon successful payment verification.
 
-### 👮 4. Middleware & Quota Management
-* **Role-Based Access Control (RBAC)**: Custom Express middlewares (`verifyToken`, `verifyAdmin`, `verifyPremium`).
+### 👮 5. Middleware & Access Control
+* **Role-Based Access Control (RBAC)**: Custom Express middlewares (`verifyToken`, `requireAdmin`, `requirePremium`).
 * **Creation Quota Enforcement**: Limits free tier accounts to 3 recipe publications, prompting paywall upgrade upon reaching the quota.
 
-### 📈 5. Admin & Quota Analytics API
+### 📈 6. Admin & Quota Analytics API
 * **Real-time Platform Metrics**: Endpoints delivering statistics on total users, active premium subscriptions, published recipes, reported content, and platform activity.
 * **Content Moderation**: API routes for reviewing, dismissing, or deleting reported recipes and managing user roles.
 

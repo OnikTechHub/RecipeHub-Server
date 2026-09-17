@@ -60,9 +60,9 @@ let totalSystemCallsCount = 0;
 
 const recordApiKeyCall = (apiKey) => {
   totalSystemCallsCount++;
-  if (!apiKey) return;
+  const keyToUse = apiKey || "DEFAULT_KEY";
   const now = Date.now();
-  const entry = apiCallTracker.get(apiKey) || { count: 0, lastReset: now };
+  const entry = apiCallTracker.get(keyToUse) || { count: 0, lastReset: now };
 
   if (now - entry.lastReset > 24 * 60 * 60 * 1000) {
     entry.count = 0;
@@ -70,8 +70,21 @@ const recordApiKeyCall = (apiKey) => {
   }
 
   entry.count += 1;
-  apiCallTracker.set(apiKey, entry);
+  apiCallTracker.set(keyToUse, entry);
 };
+
+const KEY_POOL_METADATA = [
+  { name: "Primary Production Key (AI Engine)", tag: "Primary Engine", category: "Core AI", provider: "Google Gemini 1.5 Flash" },
+  { name: "High-Throughput Analytics Key", tag: "Analytics Pool", category: "System", provider: "Google Gemini 1.5 Flash" },
+  { name: "Chef AI Recipe Generator Key #1", tag: "Recipe Engine", category: "Generator", provider: "Google Gemini 1.5 Flash" },
+  { name: "Chef AI Recipe Generator Key #2", tag: "Recipe Engine", category: "Generator", provider: "Google Gemini 1.5 Flash" },
+  { name: "Smart Grocery Parsing Key", tag: "Pantry Parser", category: "Utility", provider: "Google Gemini 1.5 Flash" },
+  { name: "Content Moderation & Review Key", tag: "Safety Guard", category: "Security", provider: "Google Gemini 1.5 Flash" },
+  { name: "Nutritional Calculation Engine Key", tag: "Health Matrix", category: "Nutrition", provider: "Google Gemini 1.5 Flash" },
+  { name: "Recommendation Engine Key", tag: "ML Predictor", category: "Discovery", provider: "Google Gemini 1.5 Flash" },
+  { name: "Secondary Failover Buffer Key", tag: "Failover Pool", category: "Standby", provider: "Google Gemini 1.5 Flash" },
+  { name: "Emergency Hot Standby Key", tag: "Emergency Hot", category: "Standby", provider: "Google Gemini 1.5 Flash" },
+];
 
 const getApiPoolAnalytics = () => {
   const keys = getGeminiApiKeys();
@@ -90,9 +103,20 @@ const getApiPoolAnalytics = () => {
       const masked = key.length > 10 ? `${key.substring(0, 6)}...${key.substring(key.length - 4)}` : `API_KEY_${index + 1}`;
       const usagePct = Number(((tracker.count / capacityPerKey) * 100).toFixed(1));
 
+      const meta = KEY_POOL_METADATA[index] || {
+        name: `Gemini Key Pool #${index + 1}`,
+        tag: `Buffer #${index + 1}`,
+        category: "Extended Pool",
+        provider: "Google Gemini 1.5 Flash",
+      };
+
       keyDetails.push({
         id: `key_${index + 1}`,
-        name: `Gemini Key #${index + 1}`,
+        keyIndex: index + 1,
+        name: meta.name,
+        tag: meta.tag,
+        category: meta.category,
+        provider: meta.provider,
         maskedKey: masked,
         callsToday: tracker.count,
         capacity: capacityPerKey,
@@ -101,15 +125,21 @@ const getApiPoolAnalytics = () => {
       });
     });
   } else {
-    totalRequestsUsed = totalSystemCallsCount;
+    const defaultEntry = apiCallTracker.get("DEFAULT_KEY") || { count: 0 };
+    totalRequestsUsed = Math.max(totalSystemCallsCount, defaultEntry.count);
+
     keyDetails.push({
       id: "key_default",
-      name: "Default Gemini Key",
+      keyIndex: 1,
+      name: "Primary Production Key (AI Engine)",
+      tag: "Primary Engine",
+      category: "Core AI",
+      provider: "Google Gemini 1.5 Flash",
       maskedKey: "GEMINI_DEFAULT",
       callsToday: totalRequestsUsed,
       capacity: capacityPerKey,
       usagePercent: Number(((totalRequestsUsed / capacityPerKey) * 100).toFixed(1)),
-      status: "Active",
+      status: totalRequestsUsed >= capacityPerKey ? "Exhausted" : "Active",
     });
   }
 
@@ -131,10 +161,59 @@ const getApiPoolAnalytics = () => {
  * Smart Culinary Fallback Generator when Gemini API keys are invalid/quota exceeded
  */
 const getSmartCulinaryFallback = (rawQuery) => {
+  recordApiKeyCall();
   const query = (rawQuery || "").trim();
   const lower = query.toLowerCase();
 
-  // 1. Greetings
+  const isBengali = /[\u0980-\u09FF]/.test(query) || lower.includes("kanto") || lower.includes("klanto") || lower.includes("ranna") || lower.includes("khabar");
+
+  // 0. Strict Off-Topic & Non-Culinary Guard
+  const offTopicKeywords = [
+    "coding", "code", "javascript", "python", "java", "react", "html", "css", "programming", "developer", "bug", "algorithm",
+    "cricket", "football", "soccer", "ipl", "match", "sports", "score", "messi", "ronaldo", "stadium", "world cup",
+    "math", "algebra", "calculus", "equation", "solve",
+    "finance", "stock", "crypto", "bitcoin", "invest", "money market", "shares",
+    "politics", "election", "government", "president", "war", "news",
+    "কোডিং", "প্রোগ্রামিং", "ক্রিকেট", "ফুটবল", "রাজনীতি", "শেয়ার বাজার", "ক্রিপ্টো"
+  ];
+
+  const culinaryAndPlatformKeywords = [
+    "recipe", "cook", "chef", "food", "dish", "ingredient", "meal", "dinner", "lunch", "breakfast", "snack", "dessert", "bake", "fry", "roast", "grill",
+    "chicken", "beef", "fish", "salmon", "pasta", "rice", "egg", "vegetable", "veggie", "potato", "cauliflower", "sweet potato", "soup", "salad", "sauce",
+    "recipehub", "platform", "stripe", "premium", "account", "ranna", "khabar", "রেসিপি", "রান্না", "উপকরণ", "খাবার", "ডিম", "ভাত", "মাংস", "মাছ", "পাস্তা", "পিৎজা", "কেক"
+  ];
+
+  const hasOffTopicKeyword = offTopicKeywords.some((kw) => lower.includes(kw));
+  const hasCulinaryOrPlatform = culinaryAndPlatformKeywords.some((ck) => lower.includes(ck));
+
+  if (hasOffTopicKeyword && !hasCulinaryOrPlatform) {
+    if (isBengali) {
+      return `👨‍🍳 **শেফ রেসিপিহাব এআই অ্যাসিস্ট্যান্ট**:
+
+আমি আন্তরিকভাবে দুঃখিত! আমি শুধুমাত্র রান্না, রেসিপি, উপকরণ, ও RecipeHub প্ল্যাটফর্ম সংক্রান্ত বিষয়ে সহায়তা করতে পারি। রান্নার বাইরের বিষয়ে (যেমন কোডিং, খেলাধুলা, বা সাধারণ বিষয়) সাহায্য করা আমার পক্ষে সম্ভব নয়।
+
+অনুগ্রহ করে রান্না বা রেসিপি সম্পর্কিত কোনো প্রশ্ন করুন, আমি সানন্দে উত্তর দেব! 🍳✨`;
+    }
+
+    return `👨‍🍳 **Chef RecipeHub AI Assistant**:
+
+I apologize, but I am specifically designed to assist ONLY with cooking, recipes, food preparation, ingredients, and RecipeHub platform features. I cannot assist with non-culinary topics like coding, sports, finance, or general trivia.
+
+Please feel free to ask any culinary or recipe question, and I'll be happy to help! 🍳✨`;
+  }
+
+  // Bengali Language Fallback Handler
+  if (isBengali) {
+    if (lower.includes("ক্লান্ত") || lower.includes("সহজ") || lower.includes("kanto") || lower.includes("klanto") || lower.includes("ক্লান্তি") || lower.includes("মুড") || lower.includes("তাড়াতাড়ি")) {
+      return `😌 **শেফ রেসিপিহাব মুড-বিশেষায়িত রান্নার গাইড (সহজ ও ঝটপট খাবার)**:\n\n### 🛋️ **১. ১৫-মিনিট গার্লিক বাটার ডিম-পাস্তা**\n- **কেন আপনার মুডের সাথে সেরা:** কোনো বাড়তি ঝামেলা ছাড়া মাত্র ১৫ মিনিটে তৈরি করা যায়।\n- **উপকরণ:** ২০০ গ্রাম পাস্তা, ২ চামচ মাখন, ৩ কোয়া রসুন কুচি, ২টি ডিম, সামান্য গোলমরিচ ও লবণ।\n- **ঝটপট প্রণালী:** পাস্তা সেদ্ধ করুন। কড়াইয়ে মাখনে রসুন সাঁতলে নিয়ে ডিম ও সেদ্ধ পাস্তা মিশিয়ে ২ মিনিট নেড়ে গরম গরম পরিবেশন করুন!\n\n### 🍲 **২. ৫-মিনিট ঝটপট ডিম ভাজি ও আলুর ভর্তা**\n- **কেন আপনার মুডের সাথে সেরা:** ঘরের সহজ উপকরণে সেরা আরামদায়ক দেশি খাবার।\n- **উপকরণ:** সেদ্ধ আলু, পেঁয়াজ কুচি, শুকনা মরিচ ভাজা, সরিষার তেল ও ডিম।\n\n*শেফ টিপস:* ক্লান্ত দিনে হালকা গরম চা বা কফির সাথে খাবারটি উপভোগ করুন! ☕✨`;
+    }
+
+    if (lower.includes("বাজেট") || lower.includes("টাকা") || lower.includes("সস্তা") || lower.includes("দাম") || lower.includes("কম") || lower.includes("৫") || lower.includes("5") || lower.includes("১০") || lower.includes("10")) {
+      return `💰 **শেফ রেসিপিহাব বাজেট-বান্ধব রান্নার গাইড (সাশ্রয়ী মিল)**:\n\n### 🍳 **১. ডিম-সবজি ফ্রাইড রাইস (কম খরচে সেরা খাবার)**\n- **আনুমানিক খরচ:** ৫০-৭০ টাকা\n- **উপকরণ:** আগের দিনের বেঁচে যাওয়া ভাত, ২টি ডিম, কুচানো গাজর/পেঁয়াজ, সয়া সস ও তেল।\n- **শেফ হ্যাক:** তেজ আঁচে কড়াইয়ে চাল সেঁকে নিলে রেস্তোরাঁর মতো ফ্লেভার আসে।\n\n### 🍝 **২. স্পেশাল আলু-ডিম কষা ও রুটি/ভাত**\n- **আনুমানিক খরচ:** ৪০-৬০ টাকা\n- **উপকরণ:** ২টি সেদ্ধ ডিম, ১টি আলু, পেঁয়াজ, রসুন ও গরম মসলা।\n\n### 💡 **রেসিপিহাব প্ল্যাটফর্ম টিপস:**\n- আমাদের **Browse Recipes** পেজে গিয়ে **Free** ফিল্টার সিলেক্ট করলে শত শত ফ্রী রেসিপি দেখতে পাবেন!\n- ড্যাশবোর্ডের **Smart Grocery List** ব্যবহার করে বাজার খরচ সাশ্রয় করুন। 🛒✨`;
+    }
+  }
+
+  // 1. Greetings (English)
   if (/^(hi|hello|hey|greetings|good morning|good evening|hola|salut|assalamu alaikum|slm)/i.test(lower)) {
     return "Hello there! 👋 I'm **Chef RecipeHub**, your personal AI culinary assistant.\n\nHow can I help you today? You can ask me about:\n- 🍳 Quick & easy recipe ideas\n- 🥦 Healthy ingredient substitutions\n- ⏱️ Cooking times & techniques\n- 🍰 Dessert and baking tips";
   }
@@ -142,9 +221,39 @@ const getSmartCulinaryFallback = (rawQuery) => {
   // 2. RecipeHub Premium Access / Pricing Questions
   if (
     lower.includes("premium") || lower.includes("membership") || lower.includes("subscription") || 
-    lower.includes("price") || lower.includes("cost") || lower.includes("upgrade") || lower.includes("stripe")
+    (lower.includes("price") && !lower.includes("cheap") && !lower.includes("budget") && !lower.includes("$")) ||
+    lower.includes("upgrade") || lower.includes("stripe")
   ) {
     return "🌟 **RecipeHub Premium Membership** unlocks exclusive culinary features:\n\n- 🔓 **Unlimited Recipe Access:** View all secret chef recipes.\n- 🤖 **Chef AI Assistant:** Unlimited 24/7 cooking guidance.\n- ⚡ **Ad-Free Browsing:** Seamless cooking experience.\n- 💎 **Exclusive Badges:** Showcase your chef status on community recipes.\n\nVisit our **Pricing** page to upgrade today!";
+  }
+
+  // 3. Mood & Craving Handling (Tired, Exhausted, Comfort, Lazy, Romantic, Rainy, Energetic, Stress Relief)
+  if (
+    lower.includes("tired") || lower.includes("exhausted") || lower.includes("comfort") || lower.includes("lazy") ||
+    lower.includes("romantic") || lower.includes("rainy") || lower.includes("date night") || lower.includes("stress") ||
+    lower.includes("vibe") || lower.includes("craving")
+  ) {
+    let moodVibe = "Comforting & Effortless";
+    if (lower.includes("tired") || lower.includes("exhausted") || lower.includes("lazy")) {
+      moodVibe = "Tired & Effortless Quick Meal";
+    } else if (lower.includes("romantic") || lower.includes("date night")) {
+      moodVibe = "Romantic Date Night";
+    } else if (lower.includes("rainy")) {
+      moodVibe = "Cozy Rainy Day Comfort";
+    }
+
+    return `😌 **Chef RecipeHub Mood-Tailored Culinary Guide (${moodVibe})**:\n\n### 🛋️ **Option 1: 15-Minute Creamy Garlic Butter Pasta**\n- **Why it fits your mood:** Minimal cleanup, soothing rich flavor, ready in under 15 minutes.\n- **Key Ingredients:** 200g pasta, 2 tbsp butter, 3 cloves garlic, 1/2 cup cream/milk, 1/4 cup Parmesan cheese.\n- **Quick Chef Tip:** Sauté garlic in butter for 1 minute, pour in cream and cheese, then toss with hot cooked pasta. Serve warm!\n\n### 🍲 **Option 2: Sheet-Pan Lemon Herb Roasted Chicken & Potatoes**\n- **Why it fits your mood:** Zero active effort—just chop, season, and let the oven do the work while you unwind.\n- **Key Ingredients:** Chicken thighs/breasts, cubed potatoes, olive oil, lemon juice, oregano, garlic powder.\n- **Quick Chef Tip:** Bake on a single sheet pan at **400°F (200°C)** for 25 minutes until golden brown.\n\n*Chef Advice:* Enjoy your meal with a relaxing warm beverage! 🕯️✨`;
+  }
+
+  // 4. Budget & Price Constraint Handling (Under $5, Under $10, Cheap, Budget, Free)
+  if (
+    lower.includes("budget") || lower.includes("cheap") || lower.includes("under") || lower.includes("$") ||
+    lower.includes("dollar") || lower.includes("low cost") || lower.includes("affordable") || lower.includes("student meal")
+  ) {
+    let priceRange = "$5 - $10 Budget Range";
+    if (lower.includes("5") || lower.includes("cheap")) priceRange = "Under $5 Meal";
+
+    return `💰 **Chef RecipeHub Budget-Friendly Culinary Guide (${priceRange})**:\n\n### 🍳 **Option 1: Gourmet Crispy Fried Rice & Egg Bowl (~$3.50 Total)**\n- **Cost Breakdown:** Leftover rice ($0.50), 2 eggs ($0.80), frozen veggies ($1.00), soy sauce & sesame oil ($1.20).\n- **Chef Hack:** Searing cooked rice in a hot cast-iron skillet creates restaurant wok-charred flavor at minimal cost.\n\n### 🍝 **Option 2: Classic Spaghetti Aglio e Olio (~$4.20 Total)**\n- **Cost Breakdown:** Spaghetti ($1.20), olive oil & fresh garlic ($1.50), chili flakes & parsley ($1.50).\n- **Chef Hack:** Emulsify 3 tbsp starchy pasta water with garlic olive oil to make a luxurious sauce without expensive creams.\n\n### 💡 **RecipeHub Platform Budget Hacks:**\n- Check out the **Browse Recipes** page and set the filter to **Free** to discover hundreds of free community recipes!\n- Use the **Smart Grocery List** feature in your dashboard to combine ingredients and eliminate grocery waste. 🛒✨`;
   }
 
   // 3. Shepherd's Pie, Cottage Pie & Ground Beef Casserole with Crispy Potato Topping (High Priority)
@@ -205,6 +314,17 @@ const getSmartCulinaryFallback = (rawQuery) => {
     return `🍰 **Chef RecipeHub's Best Plant-Based Binding Substitutes for ${target}**:\n\n1. **Flaxseed or Chia Egg (Best for Binding & Dense Cakes):**\n   - **Ratio:** 1 tbsp ground flaxseed/chia + 3 tbsp warm water (let sit for 5 mins until gelatinous = 1 egg).\n   - **Texture Effect:** Gives structure and a slightly dense, moist crumb with subtle nutty undertones.\n\n2. **Unsweetened Applesauce or Mashed Banana (Best for Moisture):**\n   - **Ratio:** 1/4 cup per egg.\n   - **Texture Effect:** Leaves the cake extra tender and soft; adds gentle natural sweetness.\n\n3. **Silken Tofu or Aquafaba (Best for Fluffiness):**\n   - **Ratio:** 1/4 cup blended silken tofu or 3 tbsp whipped chickpea water (aquafaba) = 1 egg.\n   - **Texture Effect:** Provides light, airy lifting power without altering flavor profile.\n\n*Pro Baking Tip:* When replacing eggs in chocolate cakes, adding 1/2 tsp of baking soda + 1 tbsp apple cider vinegar creates extra fluffy leavening! 🍫`;
   }
 
+  // 5. Cauliflower Pizza Crust & Special Healthy Crusts Handler
+  if (
+    lower.includes("cauliflower") || lower.includes("ফুলকপি") || lower.includes("pizza") || lower.includes("পিৎজা") || lower.includes("crust") || lower.includes("ক্রাস্ট")
+  ) {
+    if (isBengali) {
+      return `🍕 **শেফ রেসিপিহাব ক্রিসপি ফুলকপি পিৎজা ক্রাস্ট (Crispy Cauliflower Pizza Crust Guide)**:\n\n### 🥦 **১. প্রয়োজনীয় উপকরণ:**\n- **ফুলকপি রাইস:** ৪ কাপ (গ্রেট করা বা ব্লেন্ড করা ফুলকপি)\n- **বাইন্ডিং ও চিজ:** ১টি ডিম, ১/২ কাপ মোজারেলা চিজ, ১/৪ কাপ পারমেসান চিজ\n- **মসলা:** ১/২ চা চামচ রসুন গুঁড়া, ১/২ চা চামচ ওরেগানো, সামান্য লবণ ও শুকনা মরিচের গুঁড়া\n\n### 👩‍🍳 **২. পর্যায়ক্রমিক প্রস্তুত প্রণালী:**\n১. **ফুলকপি সেদ্ধ ও পানি নিংড়ানো (সবচেয়ে গুরুত্বপূর্ণ):** ব্লেন্ড করা ফুলকপি ৪-৫ মিনিট স্টিম করে নিন। এরপর পাতলা সুতি কাপড়ে চেপে **সবটুকু পানি নিংড়ে সম্পূর্ণ শুষ্ক** করে নিন। (পানি থাকলে ক্রাস্ট নরম হয়ে যাবে!)\n২. **ডো তৈরি:** শুষ্ক ফুলকপির সাথে ডিম, চিজ এবং ওরেগানো-রসুনের মসলা ভালো করে মেখে গোল ডো বানিয়ে নিন।\n৩. **বেকিং:** বেকিং পেপারে ১/৪ ইঞ্চি পুরু করে পিৎজা আকৃতিতে ছড়িয়ে **৪০০° ফারেনহাইট (২০০° সে.)** ওভেনে ১৫-২০ মিনিট সোনালী রঙ হওয়া পর্যন্ত বেক করুন।\n৪. **টপিং ও ফাইনাল ব্যাক:** ওভেন থেকে বের করে আপনার পছন্দের পিৎজা সস, চিজ ও সবজি দিয়ে আরও ৫-৭ মিনিট বেক করে গরম গরম কাটুন!\n\n*শেফ টিপস:* পানি ভালোভাবে নিংড়ানোই নিখুঁত ও মচমচে ক্রাস্ট পাওয়ার আসল গোপন ট্রিক! 🍕✨`;
+    }
+
+    return `🍕 **Chef RecipeHub's Ultimate Crispy Cauliflower Pizza Crust Guide**:\n\n### 🥦 **1. Essential Ingredients:**\n- **Cauliflower Rice:** 4 cups finely grated cauliflower florets\n- **Binder & Cheese:** 1 large egg, 1/2 cup shredded mozzarella, 1/4 cup grated Parmesan\n- **Flavorings:** 1/2 tsp garlic powder, 1/2 tsp dried oregano, 1/4 tsp sea salt\n\n### 👩‍🍳 **2. Step-by-Step Preparation:**\n1. **Steam & Squeeze Dry (Golden Rule):** Microwave/steam cauliflower rice for 4 minutes. Let cool, wrap in a clean cheesecloth towel, and **squeeze out every single drop of moisture**. (Removing liquid is the #1 secret to avoiding soggy crust!)\n2. **Mix Crust Dough:** Combine dry squeezed cauliflower with egg, mozzarella, Parmesan, and seasonings until a firm dough forms.\n3. **Shape & Pre-Bake:** Press onto a parchment-lined baking sheet into a 10-inch round (1/4-inch thick). Bake at **400°F (200°C)** for 18-20 minutes until edges are golden brown.\n4. **Top & Crisp:** Add marinara sauce, toppings, and extra mozzarella, then bake for another 6-8 minutes until cheese is bubbly!\n\n*Pro Chef Tip:* Let the baked crust sit for 5 minutes before slicing so the slices hold firm without breaking! 🧀🔥`;
+  }
+
   // 5. Dedicated Cakes & Baking Questions (ONLY when not a dinner/party/menu query)
   if (
     (lower.includes("cake") || lower.includes("chocolate") || lower.includes("bake") || lower.includes("pastry") || lower.includes("cookie")) &&
@@ -229,22 +349,12 @@ const getSmartCulinaryFallback = (rawQuery) => {
     return `👨‍🍳 **Chef RecipeHub Guide for "${query}"**:\n\n1. **Preparation:** Always prep and measure ingredients (mise en place) before starting to ensure smooth cooking.\n2. **Flavor Enhancers:** Use fresh garlic, aromatic herbs, and a touch of quality oil or butter.\n3. **Pro Tip:** Season in layers throughout cooking rather than all at the end.\n\nLooking for full community recipes for **${dishName}**? Check out the **Recipes** tab on RecipeHub! 🥘`;
   }
 
-  // 7. Scope-Aware Professional Fallback for Unmatched / Out-of-Scope Queries
-  return `👨‍🍳 **Chef RecipeHub AI Assistant**:
+  // 7. Dynamic Culinary Recipe & Cooking Fallback Generator for all other culinary queries
+  if (isBengali) {
+    return `👨‍🍳 **শেফ রেসিপিহাব স্পেশাল রান্নার গাইড ("${query}")**:\n\n### 🍽️ **১. রেসিপি ও রান্নার প্রণালী**\n- **প্রয়োজনীয় উপকরণ:** প্রধান উপকরণসমূহ, রসুন কুচি, মাখন বা অলিভ ওয়েল, বিশেষ মসলা, লবণ ও কাঁচামরিচ/গোলমরিচ।\n- **স্টেপ-বাই-স্টেপ প্রস্তুত প্রণালী:**\n  ১. প্রথমে সব উপকরণ ধুয়ে পরিষ্কার করে সঠিক আকারে কেটে প্রিপারেশন নিন।\n  ২. কড়াই বা ওভেনে মাঝারি তাপে উপকরণগুলো সাঁতলে নিন এবং মসলা দিয়ে কষে নিন।\n  ৩. সঠিক সেদ্ধ হওয়া পর্যন্ত মৃদু আঁচে রেখে নামানোর আগে সামান্য মাখন বা ফ্রেশ ধনিয়া পাতা ছড়িয়ে গরম গরম পরিবেশন করুন!\n\n### 💡 **শেফ স্পেশাল সিক্রেট টিপ:**\nস্বাদ ও টেক্সচার সেরা রাখতে রান্নার শুরুতেই অল্প লবণ দিন এবং নামানোর আগে ফাইনাল সিজনিং চেক করুন! 🔪✨`;
+  }
 
-Thank you for reaching out! I am **Chef RecipeHub**, your personal AI culinary & recipe assistant.
-
-While I specialize exclusively in cooking, recipes, flavor pairings, pantry hacks, dietary substitutes, and **RecipeHub** platform features, I am always ready to guide your cooking journey! 🍳
-
-**Here are a few things you can ask me about:**
-- 🥣 **Healthy Recipes & Power Bowls** (e.g. Crispy sweet potato bowls, quinoa bowls)
-- 🍝 **Pantry & Leftover Cooking** (e.g. Creamy pasta with leftover chicken)
-- 🍷 **Dinner Parties & Menu Planning** (e.g. 3-course Italian dinner menu)
-- 🥧 **Specialty Dish Hacks** (e.g. Shepherd's Pie with crispy potato crust)
-- 🍰 **Baking & Ingredient Substitutes** (e.g. Vegan egg replacements)
-- 🌟 **RecipeHub Platform Features** (e.g. Premium membership & recipe discovery)
-
-What delicious dish or culinary hack would you like to explore today? 🔪✨`;
+  return `👨‍🍳 **Chef RecipeHub Gourmet Culinary Guide for "${query}"**:\n\n### 🍽️ **1. Ingredients & Preparation Overview:**\n- **Key Ingredients:** Main protein/veggie base, minced garlic, butter or extra virgin olive oil, chef's seasonings, and sea salt.\n- **Step-by-Step Instructions:**\n  1. **Prep & Slice:** Clean and slice ingredients into uniform pieces for even cooking.\n  2. **Sear & Simmer:** Sauté garlic and aromatics in oil/butter until fragrant, then add main ingredients and cook over medium-high heat.\n  3. **Season & Finish:** Season to taste, simmer until tender, and garnish with fresh herbs or cheese before serving warm.\n\n### 💡 **Pro Chef Tip:**\nAlways balance rich savory flavors with a fresh touch of acidity (lemon juice or vinegar) right before serving! 🍷✨`;
 };
 
 /**
@@ -583,6 +693,8 @@ Respond ONLY with a valid JSON object matching this schema:
             body: JSON.stringify(payload),
           });
 
+          recordApiKeyCall(apiKey);
+
           const data = await response.json();
           const textReply = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
@@ -615,6 +727,7 @@ Respond ONLY with a valid JSON object matching this schema:
   }
 
   // Smart Gourmet Recipe Generator Fallback
+  recordApiKeyCall();
   let fallbackTitle = "";
   if (recipeIdea && recipeIdea.trim()) {
     const cleanIdea = recipeIdea.trim();
