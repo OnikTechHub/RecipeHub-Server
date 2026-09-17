@@ -1,5 +1,6 @@
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+const nodemailer = require("nodemailer");
 const { Resend } = require("resend");
 
 /**
@@ -23,29 +24,64 @@ const getResendClient = () => {
 };
 
 /**
- * Format sender email for Resend
- * Resend default domain for unverified domain test mode: "onboarding@resend.dev"
- * Custom domain formatting: e.g. "RecipeHub <onboarding@resend.dev>" or process.env.EMAIL_FROM
+ * Configure Nodemailer transporter for Brevo (Sendinblue) SMTP Relay
  */
-const getSenderFrom = () => {
-  const configuredFrom = cleanEnvVar(process.env.EMAIL_FROM);
-  if (configuredFrom) return configuredFrom;
-  return "RecipeHub <onboarding@resend.dev>";
+const getTransporter = () => {
+  // Always ensure freshest environment variables are loaded
+  require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+
+  const host = cleanEnvVar(process.env.BREVO_SMTP_HOST) || "smtp-relay.brevo.com";
+  const port = parseInt(cleanEnvVar(process.env.BREVO_SMTP_PORT) || "587", 10);
+  const user = cleanEnvVar(process.env.BREVO_SMTP_USER);
+  const pass = cleanEnvVar(process.env.BREVO_SMTP_PASS).replace(/\s+/g, "");
+
+  if (!user || !pass) {
+    throw new Error(
+      "Brevo SMTP credentials missing. Please set BREVO_SMTP_USER and BREVO_SMTP_PASS in environment variables."
+    );
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    pool: true,
+    maxConnections: 5,
+    auth: {
+      user,
+      pass,
+    },
+    connectionTimeout: 15000, // 15s connection timeout for cloud containers
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
 };
 
 /**
- * Verify current Resend email service status
+ * Format the sender FROM address cleanly for Brevo SMTP
+ */
+const getSenderFrom = () => {
+  const user = cleanEnvVar(process.env.BREVO_SMTP_USER);
+  const configuredFrom = cleanEnvVar(process.env.EMAIL_FROM);
+
+  if (configuredFrom) return configuredFrom;
+  return `"RecipeHub" <${user || "noreply@recipehub.com"}>`;
+};
+
+/**
+ * Verify current Brevo SMTP connection health
  */
 const verifySmtpConnection = async () => {
-  const apiKey = cleanEnvVar(process.env.RESEND_API_KEY);
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not configured in environment variables.");
-  }
+  const transporter = getTransporter();
+  await transporter.verify();
   return {
     success: true,
-    service: "Resend API",
-    apiKeyConfigured: true,
-    from: getSenderFrom(),
+    service: "Brevo SMTP Relay",
+    host: cleanEnvVar(process.env.BREVO_SMTP_HOST) || "smtp-relay.brevo.com",
+    user: cleanEnvVar(process.env.BREVO_SMTP_USER),
   };
 };
 
@@ -53,7 +89,7 @@ const verifySmtpConnection = async () => {
  * Send 6-digit registration OTP verification email to user's real email address
  */
 const sendRegistrationOtpEmail = async (toEmail, name, otp) => {
-  const resend = getResendClient();
+  const transporter = getTransporter();
   const from = getSenderFrom();
 
   const htmlContent = `
@@ -81,26 +117,19 @@ const sendRegistrationOtpEmail = async (toEmail, name, otp) => {
     </div>
   `;
 
-  const { data, error } = await resend.emails.send({
+  await transporter.sendMail({
     from,
-    to: [toEmail],
+    to: toEmail,
     subject: `${otp} is your RecipeHub verification code`,
     html: htmlContent,
   });
-
-  if (error) {
-    console.error("❌ Resend sendRegistrationOtpEmail error:", error);
-    throw new Error(error.message || "Resend email delivery failed.");
-  }
-
-  return data;
 };
 
 /**
  * Send 6-digit password reset OTP email to user's real email address
  */
 const sendPasswordResetOtpEmail = async (toEmail, otp) => {
-  const resend = getResendClient();
+  const transporter = getTransporter();
   const from = getSenderFrom();
 
   const htmlContent = `
@@ -128,26 +157,19 @@ const sendPasswordResetOtpEmail = async (toEmail, otp) => {
     </div>
   `;
 
-  const { data, error } = await resend.emails.send({
+  await transporter.sendMail({
     from,
-    to: [toEmail],
+    to: toEmail,
     subject: `${otp} is your RecipeHub password reset code`,
     html: htmlContent,
   });
-
-  if (error) {
-    console.error("❌ Resend sendPasswordResetOtpEmail error:", error);
-    throw new Error(error.message || "Resend password reset delivery failed.");
-  }
-
-  return data;
 };
 
 /**
  * Send security alert email after successful user login
  */
 const sendLoginSuccessEmail = async (toEmail, name) => {
-  const resend = getResendClient();
+  const transporter = getTransporter();
   const from = getSenderFrom();
   const time = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
 
@@ -175,26 +197,19 @@ const sendLoginSuccessEmail = async (toEmail, name) => {
     </div>
   `;
 
-  const { data, error } = await resend.emails.send({
+  await transporter.sendMail({
     from,
-    to: [toEmail],
+    to: toEmail,
     subject: `Security Alert: New login to your RecipeHub account`,
     html: htmlContent,
   });
-
-  if (error) {
-    console.error("❌ Resend sendLoginSuccessEmail error:", error);
-    throw new Error(error.message || "Resend login alert delivery failed.");
-  }
-
-  return data;
 };
 
 /**
  * Send welcome / registration success email to user's real email address
  */
 const sendRegistrationSuccessEmail = async (toEmail, name) => {
-  const resend = getResendClient();
+  const transporter = getTransporter();
   const from = getSenderFrom();
 
   const htmlContent = `
@@ -227,27 +242,18 @@ const sendRegistrationSuccessEmail = async (toEmail, name) => {
     </div>
   `;
 
-  const { data, error } = await resend.emails.send({
+  await transporter.sendMail({
     from,
-    to: [toEmail],
+    to: toEmail,
     subject: `🎉 Welcome to RecipeHub! Your Account is Ready`,
     html: htmlContent,
   });
-
-  if (error) {
-    console.error("❌ Resend sendRegistrationSuccessEmail error:", error);
-    throw new Error(error.message || "Resend welcome email delivery failed.");
-  }
-
-  return data;
 };
 
 /**
  * Send contact form submission directly to system administrator email
  */
 const sendContactAdminEmail = async ({ name, email, subject, message }) => {
-  const resend = getResendClient();
-  const from = getSenderFrom();
   const adminEmail = cleanEnvVar(process.env.ADMIN_EMAIL) || "onikdas.dev@gmail.com";
 
   const htmlContent = `
@@ -278,20 +284,37 @@ const sendContactAdminEmail = async ({ name, email, subject, message }) => {
     </div>
   `;
 
-  const { data, error } = await resend.emails.send({
-    from,
-    to: [adminEmail],
+  // Prioritize Resend API if RESEND_API_KEY is configured
+  const apiKey = cleanEnvVar(process.env.RESEND_API_KEY);
+
+  if (apiKey) {
+    const resend = getResendClient();
+    const fromAddress = cleanEnvVar(process.env.EMAIL_FROM) || "RecipeHub <onboarding@resend.dev>";
+
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: [adminEmail],
+      replyTo: email,
+      subject: `[Contact Form] ${subject || "Inquiry"} - from ${name}`,
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error("❌ Resend sendContactAdminEmail error:", error);
+      throw new Error(error.message || "Resend email delivery failed.");
+    }
+    return data;
+  }
+
+  // Fallback to Nodemailer transporter
+  const transporter = getTransporter();
+  await transporter.sendMail({
+    from: `"${name} via RecipeHub" <${cleanEnvVar(process.env.BREVO_SMTP_USER)}>`,
+    to: adminEmail,
     replyTo: email,
     subject: `[Contact Form] ${subject || "Inquiry"} - from ${name}`,
     html: htmlContent,
   });
-
-  if (error) {
-    console.error("❌ Resend sendContactAdminEmail error:", error);
-    throw new Error(error.message || "Resend contact email delivery failed.");
-  }
-
-  return data;
 };
 
 module.exports = {

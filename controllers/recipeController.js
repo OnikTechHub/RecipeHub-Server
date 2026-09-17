@@ -782,6 +782,64 @@ const updateRecipe = async (req, res, next) => {
   }
 };
 
+/**
+ * Public Home Page Statistics & Real-time Category Breakdown
+ * Route: GET /api/public-stats
+ */
+const getPublicHomeStats = async (req, res, next) => {
+  try {
+    const totalRecipes = await Recipe.countDocuments();
+    const totalUsers = await User.countDocuments();
+    const distinctAuthors = await Recipe.distinct("authorEmail");
+    const totalChefs = Math.max(distinctAuthors.length, 1);
+
+    // Dynamic Category Counts
+    const breakfastCount = await Recipe.countDocuments({
+      $or: [{ category: { $regex: /breakfast/i } }, { cuisine: { $regex: /breakfast/i } }],
+    });
+    const lunchCount = await Recipe.countDocuments({
+      $or: [{ category: { $regex: /lunch/i } }, { cuisine: { $regex: /lunch/i } }],
+    });
+    const dinnerCount = await Recipe.countDocuments({
+      $or: [{ category: { $regex: /dinner/i } }, { cuisine: { $regex: /dinner/i } }],
+    });
+    const dessertCount = await Recipe.countDocuments({
+      $or: [
+        { category: { $regex: /dessert|sweet|cake|pie|pastry|ice cream/i } },
+        { cuisine: { $regex: /dessert/i } },
+      ],
+    });
+    const snackCount = await Recipe.countDocuments({
+      $or: [{ category: { $regex: /snack/i } }, { cuisine: { $regex: /snack/i } }],
+    });
+    const beverageCount = await Recipe.countDocuments({
+      $or: [
+        { category: { $regex: /beverage|drink|smoothie|juice/i } },
+        { cuisine: { $regex: /beverage/i } },
+      ],
+    });
+
+    return res.status(200).json({
+      success: true,
+      stats: {
+        totalRecipes,
+        totalUsers: Math.max(totalUsers, 1),
+        totalChefs,
+        categories: {
+          Breakfast: breakfastCount,
+          Lunch: lunchCount,
+          Dinner: dinnerCount,
+          Desserts: dessertCount,
+          Snacks: snackCount,
+          Beverages: beverageCount,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllRecipes,
   getRecipeById,
@@ -794,4 +852,5 @@ module.exports = {
   getRecipesCount,
   deleteRecipe,
   updateRecipe,
+  getPublicHomeStats,
 };

@@ -5,6 +5,9 @@ const reportController = require("../controllers/reportController");
 const { optionalAuth } = require("../middlewares/authMiddleware");
 const { validateObjectId } = require("../middlewares/validateMiddleware");
 
+// Public home page stats & category counts
+router.get(["/public-stats", "/api/public-stats"], recipeController.getPublicHomeStats);
+
 // Featured recipes
 router.get(["/featured-recipes", "/api/featured-recipes"], optionalAuth, recipeController.getFeaturedRecipes);
 

@@ -14,21 +14,21 @@ const handleContactForm = async (req, res, next) => {
       });
     }
 
-    // Attempt sending email to admin
-    try {
-      await sendContactAdminEmail({ name, email, subject, message });
-      console.log(`✉️ Contact form message from ${email} sent to admin.`);
-    } catch (emailErr) {
-      console.error("⚠️ Failed to dispatch admin notification email:", emailErr.message);
-      // Fallback response if SMTP credentials are missing or network fails in dev environment
-    }
+    await sendContactAdminEmail({ name, email, subject, message });
+    console.log(`✉️ Contact form message from ${email} delivered to admin.`);
 
     return res.status(200).json({
       success: true,
-      message: "Thank you! Your message has been sent to our team. We will get back to you shortly.",
+      message: "Message sent successfully! We will get back to you soon.",
     });
   } catch (error) {
-    next(error);
+    console.error("❌ Contact Form Dispatch Error:", error.message || error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+        ? `Failed to send message: ${error.message}`
+        : "Failed to send message. Please try again later.",
+    });
   }
 };
 
