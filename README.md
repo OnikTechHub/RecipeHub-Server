@@ -13,7 +13,7 @@
 
 **RecipeHub Server** is the high-performance RESTful API backend powering the RecipeHub platform. Built on Node.js, Express, and MongoDB, it provides robust backend services for **Google Gemini AI Recipe Generation**, **Email OTP Verification**, **Stripe Subscription Checkout**, **Role-Based Access Control (RBAC)**, **Quota Enforcement**, and **Admin Analytics**.
 
-[🌐 Live Application](https://recipe-hub-client-two.vercel.app) • [⚙️ Backend Repository](https://github.com/OnikTechHub/RecipeHub-Server) • [💻 Frontend Repository](https://github.com/OnikTechHub/RecipeHub-Client)
+[🌐 Live Application](https://recipe-hub-web-omega.vercel.app/) • [⚙️ Backend Repository](https://github.com/OnikTechHub/RecipeHub-Server) • [💻 Frontend Repository](https://github.com/OnikTechHub/RecipeHub-Client)
 
 </div>
 
