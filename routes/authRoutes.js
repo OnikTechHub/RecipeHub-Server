@@ -3,6 +3,12 @@ const router = express.Router();
 const authController = require("../controllers/authController");
 const { authRateLimiter } = require("../middlewares/rateLimitMiddleware");
 
+// SMTP Diagnostic health check endpoint
+router.get(
+  ["/api/auth/test-smtp", "/auth/test-smtp"],
+  authController.testSmtpConnection
+);
+
 // Registration OTP dispatch & verification (Rate limited to prevent abuse)
 router.post(
   ["/api/auth/send-registration-otp", "/auth/send-registration-otp"],

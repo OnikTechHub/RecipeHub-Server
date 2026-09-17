@@ -8,9 +8,32 @@ const {
   sendRegistrationSuccessEmail,
   sendPasswordResetOtpEmail,
   sendLoginSuccessEmail,
+  verifySmtpConnection,
 } = require("../services/emailService");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Diagnostic test endpoint for SMTP connection
+ * Route: GET /api/auth/test-smtp
+ */
+const testSmtpConnection = async (req, res) => {
+  try {
+    const status = await verifySmtpConnection();
+    return res.status(200).json({
+      success: true,
+      message: "SMTP Transporter verified successfully! Email service is ready.",
+      status,
+    });
+  } catch (error) {
+    console.error("❌ SMTP Verification Failed:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "SMTP Transporter Failed: " + error.message,
+      error: error.message,
+    });
+  }
+};
 
 /**
  * Generate and send 6-digit registration OTP strictly to user's real email
@@ -86,11 +109,11 @@ const sendRegistrationOtp = async (req, res, next) => {
   } catch (error) {
     // If email delivery failed, purge the unverified OTP
     await Otp.deleteMany({ email: cleanEmail, type: "registration" });
-    console.error("Registration email dispatch error:", error.message);
+    console.error("❌ Registration email dispatch error:", error.message || error);
     return res.status(500).json({
       success: false,
-      message: error.message && error.message.includes("SMTP")
-        ? error.message
+      message: error.message
+        ? `Failed to deliver verification code: ${error.message}`
         : "Failed to deliver verification code to your email. Please check your SMTP configuration.",
     });
   }
@@ -290,11 +313,11 @@ const forgotPassword = async (req, res, next) => {
     });
   } catch (error) {
     await Otp.deleteMany({ email: cleanEmail, type: "forgot_password" });
-    console.error("Password reset email dispatch error:", error.message);
+    console.error("❌ Password reset email dispatch error:", error.message || error);
     return res.status(500).json({
       success: false,
-      message: error.message && error.message.includes("SMTP")
-        ? error.message
+      message: error.message
+        ? `Failed to deliver password reset code: ${error.message}`
         : "Failed to deliver password reset code to your email. Please check your SMTP configuration.",
     });
   }
@@ -428,6 +451,7 @@ const resetPassword = async (req, res, next) => {
 };
 
 module.exports = {
+  testSmtpConnection,
   sendRegistrationOtp,
   verifyRegistrationOtp,
   sendRegistrationSuccessNotification,

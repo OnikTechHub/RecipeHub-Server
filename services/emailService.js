@@ -5,42 +5,69 @@ const nodemailer = require("nodemailer");
 /**
  * Configure Nodemailer transporter from environment variables (.env)
  */
+/**
+ * Helper to sanitize environment variable values (stripping surrounding quotes and whitespace)
+ */
+const cleanEnvVar = (val) => {
+  if (!val || typeof val !== "string") return "";
+  return val.trim().replace(/^["']|["']$/g, "");
+};
+
+/**
+ * Configure Nodemailer transporter from environment variables (.env / Render process.env)
+ */
 const getTransporter = () => {
   // Always ensure freshest environment variables are loaded
   require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
-  const host = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
-  const port = parseInt(process.env.SMTP_PORT || "587", 10);
-  const user = process.env.SMTP_USER ? process.env.SMTP_USER.trim() : "";
-  const pass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, "") : "";
+  const rawHost = cleanEnvVar(process.env.SMTP_HOST) || "smtp.gmail.com";
+  const port = parseInt(cleanEnvVar(process.env.SMTP_PORT) || "587", 10);
+  const user = cleanEnvVar(process.env.SMTP_USER);
+  const pass = cleanEnvVar(process.env.SMTP_PASS).replace(/\s+/g, "");
 
   if (!user || !pass) {
     throw new Error(
-      "SMTP credentials not configured. Please set SMTP_USER and SMTP_PASS in recipe-hub-server/.env"
+      "SMTP credentials not configured. Please set SMTP_USER and SMTP_PASS in environment variables on Render / .env"
     );
   }
 
-  // Automatic Gmail optimization for seamless real-world delivery
-  const isGmail = host.toLowerCase().includes("gmail");
+  const isGmail = rawHost.toLowerCase().includes("gmail");
 
+  // Automatic optimization for Gmail on cloud hosts like Render
   if (isGmail) {
     return nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: port === 465 ? 465 : 587,
+      secure: port === 465,
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
       auth: {
         user,
         pass,
+      },
+      connectionTimeout: 10000, // 10 seconds connection timeout
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+      tls: {
+        rejectUnauthorized: false,
       },
     });
   }
 
   return nodemailer.createTransport({
-    host,
+    host: rawHost,
     port,
     secure: port === 465,
+    pool: true,
+    maxConnections: 5,
     auth: {
       user,
       pass,
     },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
     tls: {
       rejectUnauthorized: false,
     },
@@ -51,14 +78,27 @@ const getTransporter = () => {
  * Format the sender FROM address cleanly for SMTP/Gmail
  */
 const getSenderFrom = () => {
-  const user = process.env.SMTP_USER ? process.env.SMTP_USER.trim() : "";
-  const host = (process.env.SMTP_HOST || "smtp.gmail.com").toLowerCase();
-  const configuredFrom = process.env.EMAIL_FROM;
+  const user = cleanEnvVar(process.env.SMTP_USER);
+  const host = (cleanEnvVar(process.env.SMTP_HOST) || "smtp.gmail.com").toLowerCase();
+  const configuredFrom = cleanEnvVar(process.env.EMAIL_FROM);
 
   if (host.includes("gmail") || !configuredFrom || configuredFrom.includes("noreply@recipehub.com")) {
     return `"RecipeHub" <${user}>`;
   }
   return configuredFrom;
+};
+
+/**
+ * Verify current SMTP connection health
+ */
+const verifySmtpConnection = async () => {
+  const transporter = getTransporter();
+  await transporter.verify();
+  return {
+    success: true,
+    user: cleanEnvVar(process.env.SMTP_USER),
+    host: cleanEnvVar(process.env.SMTP_HOST) || "smtp.gmail.com",
+  };
 };
 
 /**
@@ -277,4 +317,5 @@ module.exports = {
   sendPasswordResetOtpEmail,
   sendLoginSuccessEmail,
   sendContactAdminEmail,
+  verifySmtpConnection,
 };
